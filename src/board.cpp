@@ -20,8 +20,10 @@ std::array<Piece, 64> Board::board_from_fen_string(const std::string& fen_string
 
     // Extract the board layout part from the FEN.
     std::istringstream iss(fen_string);
+    std::string boardPart, turnPart, castlingPart, enPassantPart;
+    int halfMoves, fullMoves;
     std::string fenBoard;
-    iss >> fenBoard;
+    iss >> fenBoard>> turnPart >> castlingPart >> enPassantPart >> halfMoves >> fullMoves;
     
     int file = 0;
     int rank = 7; // Start from rank 8 (index 7) and work downward.
@@ -41,6 +43,14 @@ std::array<Piece, 64> Board::board_from_fen_string(const std::string& fen_string
         }
     }
     
+    turn = turnPart=="w" ? Color::WHITE : Color::BLACK;
+    halfMoveClock = halfMoves;
+    fullMoveNumber = fullMoves;
+    enPassantTarget = (enPassantPart=="-") ? -1 : (enPassantPart[1] - '1') * 8 + (enPassantPart[0] - 'a');
+    castleRights = { castlingPart.find('K') != std::string::npos,
+        castlingPart.find('Q') != std::string::npos,
+        castlingPart.find('k') != std::string::npos,
+        castlingPart.find('q') != std::string::npos };
     return boardSquares;
 }
 
