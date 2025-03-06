@@ -51,7 +51,23 @@ struct Move {
     bool isCastling;
     PieceType promotionType;
 };
+struct lastMove{
+    // captured piece type, previous castling rights, previous en passant square, half-move clock
+    Piece movedPiece;
+    Piece capturedPiece;
+    int fromSquare;
+    int toSquare;
+    
+    bool wasEnPassant = false;
+    bool wasCastling = false;
+    bool wasPromotion = false;
+    PieceType promotedPiece = PieceType::NONE;
 
+    std::array<bool, 4> prevCastleRights;
+    int prevEnPassantTarget;
+    int prevHalfMoveClock;
+
+};
 class Board {
 public:
     // Use an array of 64 Piece objects to represent the board.
@@ -61,7 +77,7 @@ public:
     int halfMoveClock; // For the 50-move rule.
     int fullMoveNumber;            
     std::array<bool, 4> castleRights; // e.g., {true, true, true, true} for KQkq
-
+    std::vector<lastMove> moveStack;
     // Starting FEN for the standard chess starting position.
     const std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -71,6 +87,7 @@ public:
         std::vector<Move> moveList;
         moveList.reserve(256);  // Preallocate space for efficiency
         generateMoves(moveList);
+        
     }
 
     // Parses a FEN string and returns an array of Piece representing the board.
@@ -91,7 +108,7 @@ public:
     // make a move
     void makeMove(Move move);
     // unmake a move
-    void unMakeMove(Move move);
+    void unMakeMove();
     // Prints the board to the console.
     void printBoard() const;
 };

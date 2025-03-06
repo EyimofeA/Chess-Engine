@@ -319,6 +319,130 @@ bool Board::isMoveLegal(Move move) {
     // Check if the king is in check.
     bool legal = !isKingInCheck(turn);
     // Undo the move.
-    unMakeMove(move);
+    unMakeMove();
     return legal;
+}
+
+void Board::makeMove(Move move) {
+    Piece piece = squares[move.startSquare];
+    Piece capturedPiece = squares[move.targetSquare];
+    Piece emptySquare = {PieceType::NONE, Color::NONE}; // Explicitly define empty square
+    auto prevCastleRights = castleRights;
+    int prevEnPassantTarget = enPassantTarget;
+    int prevHalfMoveClock = halfMoveClock;
+
+    // Reset half-move clock on pawn moves or captures
+    if (piece.type == PieceType::PAWN || move.isCapture) {
+        halfMoveClock = 0;
+    } else {
+        halfMoveClock++;
+    }
+
+    // Handle En Passant correctly
+    if (move.isEnPassant) {
+        // Set en passant target if a pawn moves two squares forward
+        enPassantTarget = (move.startSquare + move.targetSquare) / 2;
+    } else {
+        enPassantTarget = -1; // Reset if not a double move
+    }
+
+    // Castling rights update when king or rook moves
+    if (piece.type == PieceType::KING) {
+        if (piece.color == Color::WHITE) {
+            castleRights[0] = false; // White kingside
+            castleRights[1] = false; // White queenside
+        } else {
+            castleRights[2] = false; // Black kingside
+            castleRights[3] = false; // Black queenside
+        }
+    }
+    if (piece.type == PieceType::ROOK) {
+        if (piece.color == Color::WHITE) {
+            if (move.startSquare == 0) castleRights[1] = false; // White queenside
+            if (move.startSquare == 7) castleRights[0] = false; // White kingside
+        } else {
+            if (move.startSquare == 56) castleRights[3] = false; // Black queenside
+            if (move.startSquare == 63) castleRights[2] = false; // Black kingside
+        }
+    }
+
+    // Move the piece
+    squares[move.startSquare] = emptySquare;
+    if (move.isPromotion) {
+        squares[move.targetSquare] = {move.promotionType, piece.color};
+    } else {
+        squares[move.targetSquare] = piece;
+    }
+
+    // Handle En Passant Capture
+    if (move.isEnPassant) {
+        int capturedPawnSquare = move.targetSquare + ((piece.color == Color::WHITE) ? -8 : 8);
+        squares[capturedPawnSquare] = emptySquare; // Remove the captured pawn
+    }
+
+    // Handle Castling Move
+    if (move.isCastling) {
+        if (move.targetSquare == G1) { // White kingside
+            squares[F1] = squares[H1];
+            squares[H1] = emptySquare;
+        } else if (move.targetSquare == C1) { // White queenside
+            squares[D1] = squares[A1];
+            squares[A1] = emptySquare;
+        } else if (move.targetSquare == G8) { // Black kingside
+            squares[F8] = squares[H8];
+            squares[H8] = emptySquare;
+        } else if (move.targetSquare == C8) { // Black queenside
+            squares[D8] = squares[A8];
+            squares[A8] = emptySquare;
+        }
+    }
+
+    // Update game state
+    fullMoveNumber++;
+    turn = (turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
+
+    // Store move history for undoing
+    moveStack.emplace_back(
+        piece, capturedPiece, move.startSquare, move.targetSquare,
+        move.isEnPassant, move.isCastling, move.isPromotion, move.promotionType,
+        prevCastleRights, prevEnPassantTarget, prevHalfMoveClock
+    );
+}
+
+// Unmake move (undoes last move)
+void Board::unMakeMove() {
+    if (moveStack.empty()) return;
+
+    lastMove lastmove = moveStack.back();
+    moveStack.pop_back();
+
+    squares[lastmove.fromSquare] = lastmove.movedPiece;
+    squares[lastmove.toSquare] = lastmove.capturedPiece;
+    enPassantTarget = lastmove.prevEnPassantTarget;
+    halfMoveClock = lastmove.prevHalfMoveClock;
+    castleRights = lastmove.prevCastleRights;
+    fullMoveNumber--;
+
+    // Undo En Passant Capture
+    if (lastmove.wasEnPassant) {
+        int capturedPawnSquare = lastmove.toSquare + ((lastmove.movedPiece.color == Color::WHITE) ? -8 : 8);
+        squares[capturedPawnSquare] = {PieceType::PAWN, (turn == Color::WHITE) ? Color::BLACK : Color::WHITE};
+    }
+
+    // Undo Castling Move
+    if (lastmove.wasCastling) {
+        if (lastmove.toSquare == G1) { // White kingside
+            squares[H1] = squares[F1];
+            squares[F1] = {PieceType::NONE, Color::NONE};
+        } else if (lastmove.toSquare == C1) { // White queenside
+            squares[A1] = squares[D1];
+            squares[D1] = {PieceType::NONE, Color::NONE};
+        } else if (lastmove.toSquare == G8) { // Black kingside
+            squares[H8] = squares[F8];
+            squares[F8] = {PieceType::NONE, Color::NONE};
+        } else if (lastmove.toSquare == C8) { // Black queenside
+            squares[A8] = squares[D8];
+            squares[D8] = {PieceType::NONE, Color::NONE};
+        }
+    }
 }
