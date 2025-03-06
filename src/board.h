@@ -5,11 +5,12 @@
 #include <string>
 #include <cctype>
 #include <vector>
-// Represent the type of piece.
-enum class PieceType { NONE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+#include "types.h"
+#include "moveGenerator.h"// Represent the type of piece.
+// enum class PieceType { NONE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
-// Represent piece color.
-enum class Color { WHITE, BLACK, NONE };
+// // Represent piece color.
+// enum class Color { WHITE, BLACK, NONE };
 enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -42,15 +43,15 @@ struct Piece {
 };
 
 // A simple Move structure (you can extend as needed).
-struct Move {
-    int startSquare;
-    int targetSquare;
-    bool isCapture;
-    bool isPromotion;
-    bool isEnPassant;
-    bool isCastling;
-    PieceType promotionType;
-};
+// struct Move {
+//     int startSquare;
+//     int targetSquare;
+//     bool isCapture;
+//     bool isPromotion;
+//     bool isEnPassant;
+//     bool isCastling;
+//     PieceType promotionType;
+// };
 struct lastMove{
     // captured piece type, previous castling rights, previous en passant square, half-move clock
     Piece movedPiece;
@@ -66,7 +67,21 @@ struct lastMove{
     std::array<bool, 4> prevCastleRights;
     int prevEnPassantTarget;
     int prevHalfMoveClock;
-
+    lastMove(const Piece &movedPiece, const Piece &capturedPiece, int fromSquare, int toSquare,
+        bool wasEnPassant, bool wasCastling, bool wasPromotion, PieceType promotedPiece,
+        const std::array<bool, 4>& prevCastleRights, int prevEnPassantTarget, int prevHalfMoveClock)
+   : movedPiece(movedPiece),
+     capturedPiece(capturedPiece),
+     fromSquare(fromSquare),
+     toSquare(toSquare),
+     wasEnPassant(wasEnPassant),
+     wasCastling(wasCastling),
+     wasPromotion(wasPromotion),
+     promotedPiece(promotedPiece),
+     prevCastleRights(prevCastleRights),
+     prevEnPassantTarget(prevEnPassantTarget),
+     prevHalfMoveClock(prevHalfMoveClock)
+{}
 };
 class Board {
 public:
@@ -83,15 +98,12 @@ public:
 
     // Public constructor.
     Board() {
-        squares = board_from_fen_string(startFEN);
-        std::vector<Move> moveList;
-        moveList.reserve(256);  // Preallocate space for efficiency
-        generateMoves(moveList);
-        
+        board_from_fen_string(startFEN);
+        std::vector<Move> moveList;        
     }
 
     // Parses a FEN string and returns an array of Piece representing the board.
-    std::array<Piece, 64> board_from_fen_string(const std::string& fen_string);
+    void board_from_fen_string(const std::string& fen_string);
 
     // generate pseudo legal board moves
     void generateMoves(std::vector<Move>& moveList);

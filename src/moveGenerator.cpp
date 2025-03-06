@@ -1,43 +1,61 @@
 #include <array>
+#include <iostream>
 #include <vector>
 #include <cmath>
-#include "moveGenerator.h"
 #include "board.h"
 
+
 // Main move generation: iterate over all squares and generate moves for pieces of the current side.
+std::string squareToNotation(int square) {
+    char file = 'a' + (square % 8);
+    char rank = '8' - (square / 8);
+    return std::string(1, file) + std::string(1, rank);
+}
 void Board::generateMoves(std::vector<Move>& moveList) {
+    // Generate pseudo-legal moves first
+    std::vector<Move> pseudoLegalMoves;
+    pseudoLegalMoves.reserve(256);
+
     for (int square = 0; square < 64; square++) {
         const Piece piece = squares[square];
         if (piece.type == PieceType::NONE || piece.color != turn)
             continue; // Skip empty squares and opponent's pieces
 
-        // Dispatch to piece-specific move generators.
         switch (piece.type) {
             case PieceType::PAWN:
-                generatePawnMoves(square, moveList);
+                generatePawnMoves(square, pseudoLegalMoves);
                 break;
             case PieceType::KNIGHT:
-                generateKnightMoves(square, moveList);
+                generateKnightMoves(square, pseudoLegalMoves);
                 break;
             case PieceType::BISHOP:
-                generateSlidingMoves(square, moveList, /*diagonal=*/true, /*straight=*/false);
+                generateSlidingMoves(square, pseudoLegalMoves, /*diagonal=*/true, /*straight=*/false);
                 break;
             case PieceType::ROOK:
-                generateSlidingMoves(square, moveList, /*diagonal=*/false, /*straight=*/true);
+                generateSlidingMoves(square, pseudoLegalMoves, /*diagonal=*/false, /*straight=*/true);
                 break;
             case PieceType::QUEEN:
-                generateSlidingMoves(square, moveList, /*diagonal=*/true, /*straight=*/true);
+                generateSlidingMoves(square, pseudoLegalMoves, /*diagonal=*/true, /*straight=*/true);
                 break;
             case PieceType::KING:
-                generateKingMoves(square, moveList);
+                generateKingMoves(square, pseudoLegalMoves);
                 break;
             default:
                 break;
         }
     }
-    // Generate castling and en passant moves.
-    generateCastlingMoves(moveList);
-    generateEnPassantMoves(moveList);
+    // Also generate castling and en passant moves.
+    generateCastlingMoves(pseudoLegalMoves);
+    generateEnPassantMoves(pseudoLegalMoves);
+
+    // Filter out moves that leave the king in check.
+    moveList.clear();
+    for (const auto &move : pseudoLegalMoves) {
+        if (isMoveLegal(move)){
+            // std::cout << squares[move.startSquare].toChar()<<" "<< squareToNotation(move.startSquare) << " -> " 
+            //           << squareToNotation(move.targetSquare) << "\n";
+            moveList.push_back(move);}
+    }
 }
 
 
@@ -177,32 +195,58 @@ void Board::generateKingMoves(int square, std::vector<Move>& moveList) {
         int targetFile = targetSquare % 8;
         if (std::abs(targetFile - file) > 1)
             continue;
-        if (squares[targetSquare].type == PieceType::NONE || squares[targetSquare].color != turn) {
-            moveList.push_back({square, targetSquare, squares[targetSquare].type != PieceType::NONE, false, false, false, PieceType::NONE});
-        }
+        // Skip if the target square is occupied by a friendly piece.
+        if (squares[targetSquare].type != PieceType::NONE &&
+            squares[targetSquare].color == squares[square].color)
+            continue;
+        // Otherwise, add the move (capture flag is true if an enemy piece is present).
+        bool isCapture = (squares[targetSquare].type != PieceType::NONE);
+        moveList.push_back({square, targetSquare, isCapture, false, false, false, PieceType::NONE});
     }
 }
 
 
 // --- Castling Move Generation ---
 void Board::generateCastlingMoves(std::vector<Move>& moveList) {
-    // Assumes that constants like E1, H1, A1, E8, H8, A8 are defined properly.
+    // Assumes that constants E1, H1, A1, E8, H8, A8 are defined correctly.
+    // Also assumes that checking for king safety is handled later.
     if (turn == Color::WHITE) {
+        // White kingside castling: King moves from E1 to G1.
         if (castleRights[0] && squares[E1].type == PieceType::KING && squares[H1].type == PieceType::ROOK) {
-            moveList.push_back({E1, G1, false, false, false, true, PieceType::NONE});
+            // Check that F1 and G1 are empty.
+            bool pathClear = (squares[F1].type == PieceType::NONE) && (squares[G1].type == PieceType::NONE);
+            if (pathClear)
+                moveList.push_back({E1, G1, false, false, false, true, PieceType::NONE});
         }
+        // White queenside castling: King moves from E1 to C1.
         if (castleRights[1] && squares[E1].type == PieceType::KING && squares[A1].type == PieceType::ROOK) {
-            moveList.push_back({E1, C1, false, false, false, true, PieceType::NONE});
+            // Check that B1, C1, and D1 are empty.
+            bool pathClear = (squares[B1].type == PieceType::NONE) && 
+                             (squares[C1].type == PieceType::NONE) && 
+                             (squares[D1].type == PieceType::NONE);
+            if (pathClear)
+                moveList.push_back({E1, C1, false, false, false, true, PieceType::NONE});
         }
     } else {
+        // Black kingside castling: King moves from E8 to G8.
         if (castleRights[2] && squares[E8].type == PieceType::KING && squares[H8].type == PieceType::ROOK) {
-            moveList.push_back({E8, G8, false, false, false, true, PieceType::NONE});
+            // Check that F8 and G8 are empty.
+            bool pathClear = (squares[F8].type == PieceType::NONE) && (squares[G8].type == PieceType::NONE);
+            if (pathClear)
+                moveList.push_back({E8, G8, false, false, false, true, PieceType::NONE});
         }
+        // Black queenside castling: King moves from E8 to C8.
         if (castleRights[3] && squares[E8].type == PieceType::KING && squares[A8].type == PieceType::ROOK) {
-            moveList.push_back({E8, C8, false, false, false, true, PieceType::NONE});
+            // Check that B8, C8, and D8 are empty.
+            bool pathClear = (squares[B8].type == PieceType::NONE) &&
+                             (squares[C8].type == PieceType::NONE) &&
+                             (squares[D8].type == PieceType::NONE);
+            if (pathClear)
+                moveList.push_back({E8, C8, false, false, false, true, PieceType::NONE});
         }
     }
 }
+
 
 
 // --- En Passant Move Generation ---
@@ -315,9 +359,10 @@ bool Board::isKingInCheck(Color side) {
 // Note: Since makeMove and unMakeMove are not implemented yet, this is a placeholder.
 bool Board::isMoveLegal(Move move) {
     // Apply the move temporarily.
+    Color side = turn;
     makeMove(move);
     // Check if the king is in check.
-    bool legal = !isKingInCheck(turn);
+    bool legal = !isKingInCheck(side);
     // Undo the move.
     unMakeMove();
     return legal;
@@ -445,4 +490,7 @@ void Board::unMakeMove() {
             squares[D8] = {PieceType::NONE, Color::NONE};
         }
     }
+
+    // Restore the turn to the side that just moved.
+    turn = (turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
 }

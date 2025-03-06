@@ -5,8 +5,8 @@
 
 // Parse the FEN string and fill the board.
 // We only process the board layout part of the FEN.
-std::array<Piece, 64> Board::board_from_fen_string(const std::string& fen_string) {
-    std::array<Piece, 64> boardSquares{};
+void Board::board_from_fen_string(const std::string& fen_string) {
+    squares.fill({PieceType::NONE, Color::NONE}); 
     
     // Map from FEN character (lowercase) to PieceType.
     std::unordered_map<char, PieceType> pieceFromSymbol = {
@@ -36,7 +36,7 @@ std::array<Piece, 64> Board::board_from_fen_string(const std::string& fen_string
             file += c - '0';  // Skip empty squares.
         } else {
             int index = rank * 8 + file;
-            Piece& piece = boardSquares[index];
+            Piece& piece = squares[index];
             piece.type = pieceFromSymbol[std::tolower(c)];
             piece.color = std::isupper(c) ? Color::WHITE : Color::BLACK;
             file++;
@@ -51,7 +51,6 @@ std::array<Piece, 64> Board::board_from_fen_string(const std::string& fen_string
         castlingPart.find('Q') != std::string::npos,
         castlingPart.find('k') != std::string::npos,
         castlingPart.find('q') != std::string::npos };
-    return boardSquares;
 }
 
 // Print the board in a human-friendly format.
