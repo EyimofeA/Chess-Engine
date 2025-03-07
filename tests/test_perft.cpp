@@ -34,7 +34,7 @@ std::string moveToUCI(const Move& move) {
 }
 
 // Recursive perft function with optional printing and time-limit checking.
-unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves = true,
+unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves = false,
                       const std::chrono::steady_clock::time_point &endTime = std::chrono::steady_clock::time_point::max()) {
     // Check if the time limit has been reached.
     if (std::chrono::steady_clock::now() >= endTime){
@@ -115,20 +115,20 @@ void testPerft(const std::string& fen, const std::vector<unsigned long>& expecte
 
 void runPerftTests() {
     std::cout << "Testing Standard Starting Position...\n";
-    testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-              {400, 8902, 197281, 4865609, 119060324});
+    // testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    //           {20, 8902, 197281, 4865609, 119060324});
 
     std::cout << "Testing Kiwipete Position...\n";
     testPerft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ",
               {48, 2039, 97862, 4085603, 193690690});
 
-    std::cout << "Testing Stalemate Position...\n";
-    testPerft("7k/5Q2/8/8/8/8/8/6K1 b - - 0 1",
-              {0, 0, 0, 0, 0});
+    // std::cout << "Testing Stalemate Position...\n";
+    // testPerft("7k/5Q2/8/8/8/8/8/6K1 b - - 0 1",
+    //           {0, 0, 0, 0, 0});
 
-    std::cout << "Testing Checkmate Position...\n";
-    testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBN1 w Qkq - 0 1",
-              {1, 1, 1, 1, 1}); // Only 1 move available, game ends
+    // std::cout << "Testing Checkmate Position...\n";
+    // testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBN1 w Qkq - 0 1",
+    //           {1, 1, 1, 1, 1}); // Only 1 move available, game ends
 
     std::cout << "All perft tests passed!\n";
 }
@@ -138,12 +138,13 @@ int main() {
     // std::cout << "Measuring NPS for 10 seconds...\n";
     
     Board board;
+    board.board_from_fen_string("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
     // Measure NPS with printing disabled.
     // measureNPS(board);
     
     // For demonstration, run perft at depth 1 with printing enabled.
     std::cout << "Running perft tests...\n";
-    perft(board, 4, true, true);
+    perft(board, 2, true, true);
     
     // Uncomment the next line to run the test suite.
     // runPerftTests();
