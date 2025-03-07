@@ -25,7 +25,9 @@ enum Square {
 struct Piece {
     PieceType type = PieceType::NONE;
     Color color = Color::NONE;
-
+    bool operator==(const Piece& other) const {
+        return type == other.type && color == other.color;
+    }
     // Returns a character representation for display.
     char toChar() const {
         char c = '.';

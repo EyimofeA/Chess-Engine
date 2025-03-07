@@ -1,1 +1,17 @@
 .vscode/
+# Ignore CMake build directories
+/build*/   
+/CMakeCache.txt
+/CMakeFiles/
+/Makefile
+/build.ninja
+/*.ninja_deps
+/*.ninja_log
+/*.o
+/*.a
+/*.so
+/*.exe
+/*.dll
+/*.bin
+/*.out
+/CMakePresets.json

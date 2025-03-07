@@ -8,7 +8,7 @@
 // Main move generation: iterate over all squares and generate moves for pieces of the current side.
 std::string squareToNotation(int square) {
     char file = 'a' + (square % 8);
-    char rank = '8' - (square / 8);
+    char rank = '1' + (square / 8);
     return std::string(1, file) + std::string(1, rank);
 }
 void Board::generateMoves(std::vector<Move>& moveList) {
@@ -52,8 +52,6 @@ void Board::generateMoves(std::vector<Move>& moveList) {
     moveList.clear();
     for (const auto &move : pseudoLegalMoves) {
         if (isMoveLegal(move)){
-            // std::cout << squares[move.startSquare].toChar()<<" "<< squareToNotation(move.startSquare) << " -> " 
-            //           << squareToNotation(move.targetSquare) << "\n";
             moveList.push_back(move);}
     }
 }
@@ -153,9 +151,10 @@ void Board::generateSlidingMoves(int square, std::vector<Move>& moveList, bool d
                 if (squares[targetSquare].type == PieceType::NONE) {
                     moveList.push_back({square, targetSquare, false, false, false, false, PieceType::NONE});
                 } else {
-                    if (squares[targetSquare].color != turn)
-                        moveList.push_back({square, targetSquare, true, false, false, false, PieceType::NONE});
-                    break; // Blocked
+                    if (squares[targetSquare].color != turn){
+                        moveList.push_back({square, targetSquare, true, false, false, false, PieceType::NONE});}
+                    
+                    break; // can't move further
                 }
             }
         }
@@ -174,9 +173,11 @@ void Board::generateSlidingMoves(int square, std::vector<Move>& moveList, bool d
                 if (squares[targetSquare].type == PieceType::NONE) {
                     moveList.push_back({square, targetSquare, false, false, false, false, PieceType::NONE});
                 } else {
-                    if (squares[targetSquare].color != turn)
+                    if (squares[targetSquare].color != turn){
                         moveList.push_back({square, targetSquare, true, false, false, false, PieceType::NONE});
-                    break; // Blocked
+                    }
+                    break; // can't move further
+                    
                 }
             }
         }
@@ -208,8 +209,7 @@ void Board::generateKingMoves(int square, std::vector<Move>& moveList) {
 
 // --- Castling Move Generation ---
 void Board::generateCastlingMoves(std::vector<Move>& moveList) {
-    // Assumes that constants E1, H1, A1, E8, H8, A8 are defined correctly.
-    // Also assumes that checking for king safety is handled later.
+    // Assumes that checking for king safety is handled later.
     if (turn == Color::WHITE) {
         // White kingside castling: King moves from E1 to G1.
         if (castleRights[0] && squares[E1].type == PieceType::KING && squares[H1].type == PieceType::ROOK) {
@@ -251,16 +251,27 @@ void Board::generateCastlingMoves(std::vector<Move>& moveList) {
 
 // --- En Passant Move Generation ---
 void Board::generateEnPassantMoves(std::vector<Move>& moveList) {
-    if (enPassantTarget == -1)
+    if (enPassantTarget==-1) {
         return;
-
-    int direction = (turn == Color::WHITE) ? 1 : -1;
-    int pawnSquare = enPassantTarget - direction * 8; // Square where the pawn must be.
-    if (pawnSquare >= 0 && pawnSquare < 64 &&
-        squares[pawnSquare].type == PieceType::PAWN && squares[pawnSquare].color == turn) {
-        moveList.push_back({pawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
+    }
+    int epFile = enPassantTarget%8;
+    // Check left and right adjacent squares for potential capturing pawns
+    if (epFile > 0) { // Left-side pawn
+        int leftPawnSquare = enPassantTarget - 1; // Same rank, one file left
+        if (squares[leftPawnSquare].type == PieceType::PAWN &&
+            squares[leftPawnSquare].color == turn) {
+            moveList.push_back({leftPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
+        }
+    }
+    if (epFile < 7) { // Right-side pawn
+        int rightPawnSquare = enPassantTarget + 1; // Same rank, one file right
+        if (squares[rightPawnSquare].type == PieceType::PAWN &&
+            squares[rightPawnSquare].color == turn) {
+            moveList.push_back({rightPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
+        }
     }
 }
+
 
 
 // --- isKingInCheck Implementation ---
@@ -377,18 +388,12 @@ void Board::makeMove(Move move) {
     int prevHalfMoveClock = halfMoveClock;
 
     // Reset half-move clock on pawn moves or captures
-    if (piece.type == PieceType::PAWN || move.isCapture) {
-        halfMoveClock = 0;
-    } else {
-        halfMoveClock++;
-    }
+    halfMoveClock = (piece.type == PieceType::PAWN || move.isCapture) ? 0 : halfMoveClock + 1;
 
-    // Handle En Passant correctly
-    if (move.isEnPassant) {
-        // Set en passant target if a pawn moves two squares forward
+    // Handle En Passant: Set Target if Pawn Moves Two Squares Forward
+    enPassantTarget = -1; // Default reset
+    if (piece.type == PieceType::PAWN && std::abs(move.startSquare - move.targetSquare) == 16) {
         enPassantTarget = (move.startSquare + move.targetSquare) / 2;
-    } else {
-        enPassantTarget = -1; // Reset if not a double move
     }
 
     // Castling rights update when king or rook moves
