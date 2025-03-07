@@ -35,10 +35,11 @@ std::string moveToUCI(const Move& move) {
 
 // Recursive perft function with optional printing and time-limit checking.
 unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves = false,
-                      const std::chrono::steady_clock::time_point &endTime = std::chrono::steady_clock::time_point::max()) {
+    const std::chrono::steady_clock::time_point &endTime = std::chrono::steady_clock::time_point::max()) {
     // Check if the time limit has been reached.
     if (std::chrono::steady_clock::now() >= endTime){
-        throw TimeUpException();}
+        throw TimeUpException();
+    }
 
     if (depth == 0)
         return 1;
@@ -46,6 +47,8 @@ unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves
     unsigned long nodes = 0;
     std::vector<Move> moves;
     board.generateMoves(moves);
+
+    std::vector<std::pair<std::string, unsigned long>> moveCounts; // Store moves and their counts
 
     for (const auto &move : moves) {
         // Check time again inside the loop.
@@ -58,10 +61,20 @@ unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves
         board.unMakeMove();
 
         if (isRoot && printMoves) {
-            std::cout << moveStr << " - " << childNodes << std::endl;
+            moveCounts.emplace_back(moveStr, childNodes);
         }
+
         nodes += childNodes;
-    }
+        }
+
+        // Print all moves and their counts at the root level
+        if (isRoot && printMoves) {
+            for (const auto &[moveStr, count] : moveCounts) {
+                std::cout << moveStr << " " << count << std::endl;
+            }
+            std::cout << "\n" << nodes << std::endl; // Print total node count at the end
+        }
+
     return nodes;
 }
 
@@ -133,20 +146,38 @@ void runPerftTests() {
     std::cout << "All perft tests passed!\n";
 }
 
-int main() {
-    // std::cout << "Running perft tests...\n";
-    // std::cout << "Measuring NPS for 10 seconds...\n";
-    
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;
+        return 1;
+    }
+
+    int depth = std::stoi(argv[1]);
+
+    // Properly construct the FEN string in case it has spaces
+    std::string fen = argv[2];
+    for (int i = 3; i < argc && std::string(argv[i]) != "--"; ++i) {
+        fen += " ";
+        fen += argv[i];
+    }
+
     Board board;
-    board.board_from_fen_string("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
-    // Measure NPS with printing disabled.
-    // measureNPS(board);
+    board.board_from_fen_string(fen);
+
+    // Parse moves if provided
+    for (int i = 3; i < argc; ++i) {
+        std::string moveStr = argv[i];
+        try {
+            Move move = board.parseMove(moveStr);
+            board.makeMove(move);
+        } catch (const std::exception &e) {
+            std::cerr << "Invalid move: " << moveStr << " - " << e.what() << std::endl;
+            return 1;
+        }
+    }
+
+    // Run perft and print the result
+    perft(board, depth, true, true);
     
-    // For demonstration, run perft at depth 1 with printing enabled.
-    std::cout << "Running perft tests...\n";
-    perft(board, 2, true, true);
-    
-    // Uncomment the next line to run the test suite.
-    // runPerftTests();
     return 0;
 }

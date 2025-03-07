@@ -209,62 +209,80 @@ void Board::generateKingMoves(int square, std::vector<Move>& moveList) {
 
 // --- Castling Move Generation ---
 void Board::generateCastlingMoves(std::vector<Move>& moveList) {
-    // Assumes that checking for king safety is handled later.
     if (turn == Color::WHITE) {
-        // White kingside castling: King moves from E1 to G1.
+        // White kingside castling: King from E1 to G1.
         if (castleRights[0] && squares[E1].type == PieceType::KING && squares[H1].type == PieceType::ROOK) {
-            // Check that F1 and G1 are empty.
             bool pathClear = (squares[F1].type == PieceType::NONE) && (squares[G1].type == PieceType::NONE);
-            if (pathClear)
+            if (pathClear &&
+                !isSquareAttacked(E1, turn) &&
+                !isSquareAttacked(F1, turn) &&
+                !isSquareAttacked(G1, turn))
+            {
                 moveList.push_back({E1, G1, false, false, false, true, PieceType::NONE});
+            }
         }
-        // White queenside castling: King moves from E1 to C1.
+        // White queenside castling: King from E1 to C1.
         if (castleRights[1] && squares[E1].type == PieceType::KING && squares[A1].type == PieceType::ROOK) {
-            // Check that B1, C1, and D1 are empty.
-            bool pathClear = (squares[B1].type == PieceType::NONE) && 
-                             (squares[C1].type == PieceType::NONE) && 
+            bool pathClear = (squares[B1].type == PieceType::NONE) &&
+                             (squares[C1].type == PieceType::NONE) &&
                              (squares[D1].type == PieceType::NONE);
-            if (pathClear)
+            if (pathClear &&
+                !isSquareAttacked(E1, turn) &&
+                !isSquareAttacked(D1, turn) &&
+                !isSquareAttacked(C1, turn))
+            {
                 moveList.push_back({E1, C1, false, false, false, true, PieceType::NONE});
+            }
         }
     } else {
-        // Black kingside castling: King moves from E8 to G8.
+        // Black kingside castling: King from E8 to G8.
         if (castleRights[2] && squares[E8].type == PieceType::KING && squares[H8].type == PieceType::ROOK) {
-            // Check that F8 and G8 are empty.
             bool pathClear = (squares[F8].type == PieceType::NONE) && (squares[G8].type == PieceType::NONE);
-            if (pathClear)
+            if (pathClear &&
+                !isSquareAttacked(E8, turn) &&
+                !isSquareAttacked(F8, turn) &&
+                !isSquareAttacked(G8, turn))
+            {
                 moveList.push_back({E8, G8, false, false, false, true, PieceType::NONE});
+            }
         }
-        // Black queenside castling: King moves from E8 to C8.
+        // Black queenside castling: King from E8 to C8.
         if (castleRights[3] && squares[E8].type == PieceType::KING && squares[A8].type == PieceType::ROOK) {
-            // Check that B8, C8, and D8 are empty.
             bool pathClear = (squares[B8].type == PieceType::NONE) &&
                              (squares[C8].type == PieceType::NONE) &&
                              (squares[D8].type == PieceType::NONE);
-            if (pathClear)
+            if (pathClear &&
+                !isSquareAttacked(E8, turn) &&
+                !isSquareAttacked(D8, turn) &&
+                !isSquareAttacked(C8, turn))
+            {
                 moveList.push_back({E8, C8, false, false, false, true, PieceType::NONE});
+            }
         }
     }
 }
 
 
 
-// --- En Passant Move Generation ---
+
 void Board::generateEnPassantMoves(std::vector<Move>& moveList) {
-    if (enPassantTarget==-1) {
+    if (enPassantTarget == -1)
         return;
-    }
-    int epFile = enPassantTarget%8;
-    // Check left and right adjacent squares for potential capturing pawns
-    if (epFile > 0) { // Left-side pawn
-        int leftPawnSquare = enPassantTarget - 1; // Same rank, one file left
+    
+    // Assume doubleMoveTarget is stored from the last two-square pawn move.
+    int dmt = moveStack.back().toSquare;  // For a2a4, this would be 24 (a4).
+    int dmtFile = dmt % 8;
+
+    // Check adjacent squares to the double move target.
+    if (dmtFile > 0) { // Check left side
+        int leftPawnSquare = dmt - 1;
         if (squares[leftPawnSquare].type == PieceType::PAWN &&
             squares[leftPawnSquare].color == turn) {
             moveList.push_back({leftPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
         }
     }
-    if (epFile < 7) { // Right-side pawn
-        int rightPawnSquare = enPassantTarget + 1; // Same rank, one file right
+    if (dmtFile < 7) { // Check right side
+        int rightPawnSquare = dmt + 1;
         if (squares[rightPawnSquare].type == PieceType::PAWN &&
             squares[rightPawnSquare].color == turn) {
             moveList.push_back({rightPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
@@ -274,23 +292,14 @@ void Board::generateEnPassantMoves(std::vector<Move>& moveList) {
 
 
 
-// --- isKingInCheck Implementation ---
-bool Board::isKingInCheck(Color side) {
-    int kingPos = -1;
-    // Find the king's position for the given side.
-    for (int square = 0; square < 64; square++) {
-        if (squares[square].type == PieceType::KING && squares[square].color == side) {
-            kingPos = square;
-            break;
-        }
-    }
-    if (kingPos == -1) return false; // Should not happen.
+bool Board::isSquareAttacked(int square, Color side) {
+    if (square == -1) return false; // Should not happen.
 
     // Check for enemy pawn attacks.
     std::array<int, 2> pawnDiag = (side == Color::WHITE) ? std::array<int,2>{-7, -9} : std::array<int,2>{7, 9};
-    int kingFile = kingPos % 8;
+    int kingFile = square % 8;
     for (int offset : pawnDiag) {
-        int pos = kingPos + offset;
+        int pos = square + offset;
         if (pos < 0 || pos >= 64) continue;
         if (std::abs((pos % 8) - kingFile) != 1)
             continue;
@@ -301,7 +310,7 @@ bool Board::isKingInCheck(Color side) {
     // Check for knight attacks.
     const int knightOffsets[8] = { -17, -15, -10, -6, 6, 10, 15, 17 };
     for (int offset : knightOffsets) {
-        int pos = kingPos + offset;
+        int pos = square + offset;
         if (pos < 0 || pos >= 64) continue;
         int fileDiff = std::abs((pos % 8) - kingFile);
         if (fileDiff > 2)
@@ -314,7 +323,7 @@ bool Board::isKingInCheck(Color side) {
     // Define directions for bishop-like moves.
     const int bishopDirs[4] = { -9, -7, 7, 9 };
     for (int dir : bishopDirs) {
-        int pos = kingPos;
+        int pos = square;
         while (true) {
             int prev = pos;
             pos += dir;
@@ -333,7 +342,7 @@ bool Board::isKingInCheck(Color side) {
     // Straight-line moves for rooks and queens.
     const int rookDirs[4] = { -8, -1, 1, 8 };
     for (int dir : rookDirs) {
-        int pos = kingPos;
+        int pos = square;
         while (true) {
             int prev = pos;
             pos += dir;
@@ -353,7 +362,7 @@ bool Board::isKingInCheck(Color side) {
     // Check for enemy king (adjacent squares).
     const int kingOffsets[8] = { -9, -8, -7, -1, 1, 7, 8, 9 };
     for (int offset : kingOffsets) {
-        int pos = kingPos + offset;
+        int pos = square + offset;
         if (pos < 0 || pos >= 64)
             continue;
         if (std::abs((pos % 8) - kingFile) > 1)
@@ -363,6 +372,20 @@ bool Board::isKingInCheck(Color side) {
     }
 
     return false;
+}
+// --- isKingInCheck Implementation ---
+bool Board::isKingInCheck(Color side) {
+    int kingPos = -1;
+    // Find the king's position for the given side.
+    for (int square = 0; square < 64; square++) {
+        if (squares[square].type == PieceType::KING && squares[square].color == side) {
+            kingPos = square;
+            break;
+        }
+    }
+    if (kingPos == -1) return false; // Should not happen.
+
+    return isSquareAttacked(kingPos, side);
 }
 
 

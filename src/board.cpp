@@ -67,3 +67,32 @@ void Board::printBoard() const {
     }
     std::cout << "\n   a b c d e f g h\n\n";
 }
+
+Move Board::parseMove(const std::string &uciMove) {
+    if (uciMove.length() < 4) {
+        throw std::invalid_argument("Invalid UCI move format");
+    }
+
+    int startSquare = (uciMove[1] - '1') * 8 + (uciMove[0] - 'a');
+    int targetSquare = (uciMove[3] - '1') * 8 + (uciMove[2] - 'a');
+
+    bool isPromotion = (uciMove.length() == 5);
+    PieceType promotionType = PieceType::NONE;
+
+    if (isPromotion) {
+        switch (uciMove[4]) {
+            case 'q': promotionType = PieceType::QUEEN; break;
+            case 'r': promotionType = PieceType::ROOK; break;
+            case 'b': promotionType = PieceType::BISHOP; break;
+            case 'n': promotionType = PieceType::KNIGHT; break;
+            default: throw std::invalid_argument("Invalid promotion piece");
+        }
+    }
+
+    // Determine if the move is a capture, en passant, or castling
+    bool isCapture = squares[targetSquare].type != PieceType::NONE;
+    bool isEnPassant = (enPassantTarget == targetSquare);
+    bool isCastling = (squares[startSquare].type == PieceType::KING && std::abs(startSquare - targetSquare) == 2);
+
+    return Move{startSquare, targetSquare, isCapture, isPromotion, isEnPassant, isCastling, promotionType};
+}

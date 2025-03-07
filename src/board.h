@@ -117,6 +117,7 @@ public:
     void generateEnPassantMoves(std::vector<Move>& moveList);
 
     bool isKingInCheck(Color side);
+    bool isSquareAttacked(int Square, Color side);
     bool isMoveLegal(Move move);
 
     // make a move
@@ -125,6 +126,7 @@ public:
     void unMakeMove();
     // Prints the board to the console.
     void printBoard() const;
+    Move parseMove(const std::string &uciMove);
 };
 
 #endif // BOARD_H
