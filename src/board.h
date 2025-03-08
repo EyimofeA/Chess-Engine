@@ -21,7 +21,7 @@ public:
     ZobristArray initZobrist;
     // Starting FEN for the standard chess starting position.
     const std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    std::vector<Move> moveList;   
+    // std::vector<Move> moveList;   
     // Public constructor.
     Board() {
         board_from_fen_string(startFEN); 
@@ -42,7 +42,7 @@ public:
     // Parses a FEN string and returns an array of Piece representing the board.
     void board_from_fen_string(const std::string& fen_string);
 
-    // generate pseudo legal board moves
+    // generate legal board moves
     void generateMoves(std::vector<Move>& moveList);
     void generatePawnMoves(int square, std::vector<Move>& moveList);
     void generateKnightMoves(int square, std::vector<Move>& moveList);
@@ -57,7 +57,7 @@ public:
 
     // make a move
     void makeMove(Move move);
-    // unmake a move
+    // unmake the most recent move
     void unMakeMove();
 
 
