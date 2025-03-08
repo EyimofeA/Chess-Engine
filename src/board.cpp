@@ -1,7 +1,12 @@
 #include "board.h"
+#include "moveGenerator.h"
+#include "types.h"
+#include <random>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 // Parse the FEN string and fill the board.
 // We only process the board layout part of the FEN.
@@ -108,3 +113,105 @@ bool Board::operator==(const Board& other) const {
            moveStack == other.moveStack;
 }
 
+
+
+// Game Result Checking
+// Move Generation (including checks for checkmate & stalemate)
+// Stalemate & Checkmate Detection
+// Threefold Repetition Detection (requires tracking board states)
+// Fifty-Move Rule Enforcement (simple counter tracking)
+bool Board::isStalemate(){
+    std::vector<Move> moves;
+    generateMoves(moves);
+    return moves.empty() && !isKingInCheck(turn);
+}
+
+bool Board::isFiftyMoveRule() {
+    // Each player's move counts as one half-move.
+    return halfMoveClock >= 100;
+}
+void Board::initZobristArray() {
+    std::mt19937_64 rng(123456789); // Use a high-quality seed
+    std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < 12; j++) { // 12 for all pieces (6 white + 6 black)
+            initZobrist.ZobristArray[i][j] = dist(rng);
+        }
+    }
+    initZobrist.blackToMove = dist(rng);
+    
+    for (int i = 0; i < 4; i++) {
+        initZobrist.castleRights[i] = dist(rng);
+    }
+
+    for (int i = 0; i < 8; i++) {
+        initZobrist.enPassantFiles[i] = dist(rng);
+    }
+}
+
+uint64_t Board::computeZobristHash() {
+    uint64_t hash = 0;
+
+    if (turn == Color::BLACK) {
+        hash ^= initZobrist.blackToMove;
+    }
+
+    for (int i = 0; i < 64; i++) {
+        if (squares[i].type != PieceType::NONE) {
+            int pieceIndex = static_cast<int>(squares[i].type) + (squares[i].color == Color::WHITE ? 0 : 6);
+            hash ^= initZobrist.ZobristArray[i][pieceIndex];
+        }
+    }
+
+    for (int i = 0; i < 4; i++) {
+        hash ^= initZobrist.castleRights[i];
+    }
+
+    if (enPassantTarget != -1) {
+        hash ^= initZobrist.enPassantFiles[enPassantTarget % 8];
+    }
+
+    return hash;
+}
+bool Board::isThreefoldRepetition() {
+    // Ensure positionHistory is updated in makeMove/unMakeMove.
+    uint64_t currentHash = computeZobristHash();
+    int count = 0;
+    for (uint64_t hash : positionHistory) {
+        if (hash == currentHash)
+            count++;
+    }
+    return count >= 3;
+}
+
+GameResult Board::checkGameState() {
+    // Check for draw by fifty-move rule.
+    if (isFiftyMoveRule())
+        return GameResult::DRAW_FIFTY_MOVE;
+    
+    // Check for draw by threefold repetition.
+    if (isThreefoldRepetition())
+        return GameResult::DRAW_THREEFOLD;
+    
+    // Check for draw by insufficient material.
+    if (isInsufficientMaterial())
+        return GameResult::DRAW_INSUFFICIENT_MATERIAL;
+    
+    // Generate legal moves for the current side.
+    std::vector<Move> moves;
+    generateMoves(moves);
+    
+    // If no legal moves exist, it's either checkmate or stalemate.
+    if (moves.empty()) {
+        if (isKingInCheck(turn)) {
+            // The current side is in check with no legal moves → checkmate.
+            return (turn == Color::WHITE) ? GameResult::BLACK_CHECKMATE : GameResult::WHITE_CHECKMATE;
+        } else {
+            return GameResult::DRAW_STALEMATE;
+        }
+    }
+    
+    // If none of the conditions apply, the game continues.
+    return GameResult::ONGOING;
+}

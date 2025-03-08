@@ -7,100 +7,7 @@
 #include <vector>
 #include "types.h"
 #include "moveGenerator.h"// Represent the type of piece.
-// enum class PieceType { NONE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
-// // Represent piece color.
-// enum class Color { WHITE, BLACK, NONE };
-enum Square {
-    A1, B1, C1, D1, E1, F1, G1, H1,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A8, B8, C8, D8, E8, F8, G8, H8
-};
-// A chess piece: type and color.
-struct Piece {
-    PieceType type = PieceType::NONE;
-    Color color = Color::NONE;
-    bool operator==(const Piece& other) const {
-        return type == other.type && color == other.color;
-    }
-    // Returns a character representation for display.
-    char toChar() const {
-        char c = '.';
-        switch (type) {
-            case PieceType::PAWN:   c = 'P'; break;
-            case PieceType::KNIGHT: c = 'N'; break;
-            case PieceType::BISHOP: c = 'B'; break;
-            case PieceType::ROOK:   c = 'R'; break;
-            case PieceType::QUEEN:  c = 'Q'; break;
-            case PieceType::KING:   c = 'K'; break;
-            default:              c = '.'; break;
-        }
-        return (color == Color::BLACK) ? static_cast<char>(std::tolower(c)) : c;
-    }
-};
-
-// A simple Move structure (you can extend as needed).
-// struct Move {
-//     int startSquare;
-//     int targetSquare;
-//     bool isCapture;
-//     bool isPromotion;
-//     bool isEnPassant;
-//     bool isCastling;
-//     PieceType promotionType;
-// };
-struct lastMove{
-    // captured piece type, previous castling rights, previous en passant square, half-move clock
-    Piece movedPiece;
-    Piece capturedPiece;
-    int fromSquare;
-    int toSquare;
-    
-    bool wasEnPassant = false;
-    bool wasCastling = false;
-    bool wasPromotion = false;
-    PieceType promotedPiece = PieceType::NONE;
-
-    std::array<bool, 4> prevCastleRights;
-    int prevEnPassantTarget;
-    int prevHalfMoveClock;
-    int prevFullMoveNumber;
-    bool operator==(const lastMove& other) const {
-        return movedPiece == other.movedPiece &&
-               capturedPiece == other.capturedPiece &&
-               fromSquare == other.fromSquare &&
-               toSquare == other.toSquare &&
-               wasEnPassant == other.wasEnPassant &&
-               wasCastling == other.wasCastling &&
-               wasPromotion == other.wasPromotion &&
-               promotedPiece == other.promotedPiece &&
-               prevCastleRights == other.prevCastleRights &&
-               prevEnPassantTarget == other.prevEnPassantTarget &&
-               prevHalfMoveClock == other.prevHalfMoveClock;
-    }
-
-    lastMove(const Piece &movedPiece, const Piece &capturedPiece, int fromSquare, int toSquare,
-        bool wasEnPassant, bool wasCastling, bool wasPromotion, PieceType promotedPiece,
-        const std::array<bool, 4>& prevCastleRights, int prevEnPassantTarget, int prevHalfMoveClock,int prevFullMoveNumber)
-   : movedPiece(movedPiece),
-     capturedPiece(capturedPiece),
-     fromSquare(fromSquare),
-     toSquare(toSquare),
-     wasEnPassant(wasEnPassant),
-     wasCastling(wasCastling),
-     wasPromotion(wasPromotion),
-     promotedPiece(promotedPiece),
-     prevCastleRights(prevCastleRights),
-     prevEnPassantTarget(prevEnPassantTarget),
-     prevHalfMoveClock(prevHalfMoveClock),
-     prevFullMoveNumber(prevFullMoveNumber)
-{}
-};
 class Board {
 public:
     // Use an array of 64 Piece objects to represent the board.
@@ -111,13 +18,14 @@ public:
     int fullMoveNumber;            
     std::array<bool, 4> castleRights; // e.g., {true, true, true, true} for KQkq
     std::vector<lastMove> moveStack;
+    ZobristArray initZobrist;
     // Starting FEN for the standard chess starting position.
     const std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
+    std::vector<Move> moveList;   
     // Public constructor.
     Board() {
-        board_from_fen_string(startFEN);
-        std::vector<Move> moveList;        
+        board_from_fen_string(startFEN); 
+        
     }
     
     bool operator==(const Board& other) const;
@@ -125,7 +33,11 @@ public:
         return !(*this == other);
     }
     
-    
+    GameResult checkGameState();   // Checks if game is ongoing or ended
+    bool isFiftyMoveRule();        // Checks 50-move rule
+    bool isThreefoldRepetition();  // Checks 3x repetition
+    bool isInsufficientMaterial(); // Checks for insufficient material draw
+    bool isStalemate();            // Checks for stalemate
 
     // Parses a FEN string and returns an array of Piece representing the board.
     void board_from_fen_string(const std::string& fen_string);
@@ -147,9 +59,15 @@ public:
     void makeMove(Move move);
     // unmake a move
     void unMakeMove();
+
+
     // Prints the board to the console.
     void printBoard() const;
     Move parseMove(const std::string &uciMove);
+private:
+    std::vector<uint64_t> positionHistory;  // Stores board state hashes for threefold repetition
+    uint64_t computeZobristHash();          // Computes a unique board hash
+    void initZobristArray();
 };
 
 #endif // BOARD_H

@@ -1,5 +1,4 @@
 #include <array>
-#include <iostream>
 #include <vector>
 #include <cmath>
 #include "board.h"
@@ -529,6 +528,7 @@ void Board::makeMove(Move move) {
     if (turn == Color::BLACK){
         fullMoveNumber++;}
     turn = (turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    positionHistory.push_back(computeZobristHash());
 
     // Store move history for undoing
     moveStack.emplace_back(
@@ -543,6 +543,7 @@ void Board::unMakeMove() {
     if (moveStack.empty()) return;
 
     lastMove lastmove = moveStack.back();
+    positionHistory.pop_back();
     moveStack.pop_back();
 
     squares[lastmove.fromSquare] = lastmove.movedPiece;
