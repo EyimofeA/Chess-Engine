@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "board.h"
+#include "types.h"
 
 
 // Main move generation: iterate over all squares and generate moves for pieces of the current side.
@@ -141,12 +142,15 @@ void Board::generateSlidingMoves(int square, std::vector<Move>& moveList, bool d
         for (int i = 0; i < 4; i++) {
             int targetSquare = square;
             while (true) {
+                int prevSquare = targetSquare;
                 targetSquare += diagonalOffsets[i];
                 // Check bounds before accessing.
                 if (targetSquare < 0 || targetSquare >= 64)
                     break;
-                // Prevent wrap-around: check file differences.
-                if (std::abs((targetSquare % 8) - ( (targetSquare - diagonalOffsets[i]) % 8)) != 1)
+                // Prevent wrap-around by checking file difference
+                int targetFile = targetSquare % 8;
+                int prevFile = prevSquare % 8;
+                if (std::abs(targetFile - prevFile) != 1)
                     break;
                 if (squares[targetSquare].type == PieceType::NONE) {
                     moveList.push_back({square, targetSquare, false, false, false, false, PieceType::NONE});
@@ -160,16 +164,21 @@ void Board::generateSlidingMoves(int square, std::vector<Move>& moveList, bool d
         }
     }
     if (straight) {
-        for (int i = 0; i < 4; i++) {
+        for (int offset:straightOffsets) {
             int targetSquare = square;
             while (true) {
-                targetSquare += straightOffsets[i];
+                int prevSquare = targetSquare;
+                targetSquare += offset;
                 // Check bounds.
                 if (targetSquare < 0 || targetSquare >= 64)
                     break;
-                // Check that move doesn't wrap around horizontally.
-                if (std::abs((targetSquare % 8) - ( (targetSquare - straightOffsets[i]) % 8)) > 1)
-                    break;
+                // For horizontal moves (offset = +/-1), check file difference
+                if (offset == 1 || offset == -1) {
+                    int targetFile = targetSquare % 8;
+                    int prevFile = prevSquare % 8;
+                    if (std::abs(targetFile - prevFile) != 1)
+                        break;
+                }
                 if (squares[targetSquare].type == PieceType::NONE) {
                     moveList.push_back({square, targetSquare, false, false, false, false, PieceType::NONE});
                 } else {
@@ -266,29 +275,48 @@ void Board::generateCastlingMoves(std::vector<Move>& moveList) {
 
 
 void Board::generateEnPassantMoves(std::vector<Move>& moveList) {
+    // If no en passant target is set, nothing to do.
     if (enPassantTarget == -1)
         return;
-    
-    // Assume doubleMoveTarget is stored from the last two-square pawn move.
-    int dmt = moveStack.back().toSquare;  // For a2a4, this would be 24 (a4).
-    int dmtFile = dmt % 8;
 
-    // Check adjacent squares to the double move target.
-    if (dmtFile > 0) { // Check left side
-        int leftPawnSquare = dmt - 1;
-        if (squares[leftPawnSquare].type == PieceType::PAWN &&
-            squares[leftPawnSquare].color == turn) {
-            moveList.push_back({leftPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
-        }
-    }
-    if (dmtFile < 7) { // Check right side
-        int rightPawnSquare = dmt + 1;
-        if (squares[rightPawnSquare].type == PieceType::PAWN &&
-            squares[rightPawnSquare].color == turn) {
-            moveList.push_back({rightPawnSquare, enPassantTarget, true, false, true, false, PieceType::NONE});
+    // Determine the square of the pawn that moved two squares.
+    int capturedPawnSquare = enPassantTarget + ((turn == Color::WHITE) ? -8 : 8);
+    // Make sure that square is valid and holds an opponent pawn.
+    if (capturedPawnSquare < 0 || capturedPawnSquare >= 64)
+        return;
+    if (squares[capturedPawnSquare].type != PieceType::PAWN || squares[capturedPawnSquare].color == turn)
+        return;
+
+    // For every pawn of the side to move, check if it can capture en passant.
+    for (int square = 0; square < 64; square++) {
+        if (squares[square].type != PieceType::PAWN || squares[square].color != turn)
+            continue;
+        
+        // Check both diagonal capture directions.
+        int diagOffsets[2] = { (turn == Color::WHITE ? 7 : -7),
+                               (turn == Color::WHITE ? 9 : -9) };
+
+        for (int offset : diagOffsets) {
+            if (square + offset == enPassantTarget) {
+                // Prevent wrap-around by ensuring the file difference is exactly 1.
+                int file = square % 8;
+                int targetFile = enPassantTarget % 8;
+                if (std::abs(file - targetFile) == 1) {
+                    // Add en passant move:
+                    //   startSquare: current pawn square,
+                    //   targetSquare: enPassant target square,
+                    //   isCapture: true,
+                    //   isPromotion: false,
+                    //   isEnPassant: true,
+                    //   isCastling: false,
+                    //   promotionType: NONE.
+                    moveList.push_back({square, enPassantTarget, true, false, true, false, PieceType::NONE});
+                }
+            }
         }
     }
 }
+
 
 
 
@@ -296,7 +324,7 @@ bool Board::isSquareAttacked(int square, Color side) {
     if (square == -1) return false; // Should not happen.
 
     // Check for enemy pawn attacks.
-    std::array<int, 2> pawnDiag = (side == Color::WHITE) ? std::array<int,2>{-7, -9} : std::array<int,2>{7, 9};
+    std::array<int, 2> pawnDiag = (side == Color::BLACK) ? std::array<int,2>{-7, -9} : std::array<int,2>{7, 9};
     int kingFile = square % 8;
     for (int offset : pawnDiag) {
         int pos = square + offset;
@@ -343,13 +371,17 @@ bool Board::isSquareAttacked(int square, Color side) {
     const int rookDirs[4] = { -8, -1, 1, 8 };
     for (int dir : rookDirs) {
         int pos = square;
+        int prevFile = pos % 8;
         while (true) {
-            int prev = pos;
             pos += dir;
             if (pos < 0 || pos >= 64) break;
-            // Check horizontal wrap-around.
-            if (std::abs((pos % 8) - (prev % 8)) > 1)
+            
+            // For horizontal moves, check file difference to prevent wrap-around
+            int posFile = pos % 8;
+            if ((dir == -1 || dir == 1) && std::abs(posFile - prevFile) != 1)
                 break;
+            prevFile = posFile;
+            
             if (squares[pos].type != PieceType::NONE) {
                 if ((squares[pos].color != side) &&
                     (squares[pos].type == PieceType::ROOK || squares[pos].type == PieceType::QUEEN))
@@ -405,10 +437,11 @@ bool Board::isMoveLegal(Move move) {
 void Board::makeMove(Move move) {
     Piece piece = squares[move.startSquare];
     Piece capturedPiece = squares[move.targetSquare];
-    Piece emptySquare = {PieceType::NONE, Color::NONE}; // Explicitly define empty square
+    Piece emptySquare = {PieceType::NONE, Color::NONE}; 
     auto prevCastleRights = castleRights;
     int prevEnPassantTarget = enPassantTarget;
     int prevHalfMoveClock = halfMoveClock;
+    int prevFullMoveNumber= fullMoveNumber;
 
     // Reset half-move clock on pawn moves or captures
     halfMoveClock = (piece.type == PieceType::PAWN || move.isCapture) ? 0 : halfMoveClock + 1;
@@ -438,11 +471,33 @@ void Board::makeMove(Move move) {
             if (move.startSquare == 63) castleRights[2] = false; // Black kingside
         }
     }
-
+    // update castle rights if rook is captured
+    if (move.isCapture) {
+        if (capturedPiece.type == PieceType::ROOK) {
+            if (move.targetSquare == A1 && capturedPiece.color == Color::WHITE) {
+                castleRights[1] = false;
+            } else if (move.targetSquare == H1 && capturedPiece.color == Color::WHITE) {
+                castleRights[0] = false;
+            } else if (move.targetSquare == A8 && capturedPiece.color == Color::BLACK) {
+                castleRights[3] = false;
+            } else if (move.targetSquare == H8 && capturedPiece.color == Color::BLACK) {
+                castleRights[2] = false;
+            }
+        }
+    }
     // Move the piece
     squares[move.startSquare] = emptySquare;
     if (move.isPromotion) {
-        squares[move.targetSquare] = {move.promotionType, piece.color};
+        // Validate promotion type
+        if (move.promotionType == PieceType::QUEEN || 
+            move.promotionType == PieceType::ROOK || 
+            move.promotionType == PieceType::BISHOP || 
+            move.promotionType == PieceType::KNIGHT) {
+            squares[move.targetSquare] = {move.promotionType, piece.color};
+        } else {
+            // Default to queen if invalid promotion type
+            squares[move.targetSquare] = {PieceType::QUEEN, piece.color};
+        }
     } else {
         squares[move.targetSquare] = piece;
     }
@@ -471,14 +526,15 @@ void Board::makeMove(Move move) {
     }
 
     // Update game state
-    fullMoveNumber++;
+    if (turn == Color::BLACK){
+        fullMoveNumber++;}
     turn = (turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
 
     // Store move history for undoing
     moveStack.emplace_back(
         piece, capturedPiece, move.startSquare, move.targetSquare,
         move.isEnPassant, move.isCastling, move.isPromotion, move.promotionType,
-        prevCastleRights, prevEnPassantTarget, prevHalfMoveClock
+        prevCastleRights, prevEnPassantTarget, prevHalfMoveClock,prevFullMoveNumber
     );
 }
 
@@ -494,13 +550,15 @@ void Board::unMakeMove() {
     enPassantTarget = lastmove.prevEnPassantTarget;
     halfMoveClock = lastmove.prevHalfMoveClock;
     castleRights = lastmove.prevCastleRights;
-    fullMoveNumber--;
+    fullMoveNumber = lastmove.prevFullMoveNumber;
 
     // Undo En Passant Capture
     if (lastmove.wasEnPassant) {
         int capturedPawnSquare = lastmove.toSquare + ((lastmove.movedPiece.color == Color::WHITE) ? -8 : 8);
-        squares[capturedPawnSquare] = {PieceType::PAWN, (turn == Color::WHITE) ? Color::BLACK : Color::WHITE};
+        // Restore the captured pawn with the opposite color of the moving pawn.
+        squares[capturedPawnSquare] = {PieceType::PAWN, (lastmove.movedPiece.color == Color::WHITE) ? Color::BLACK : Color::WHITE};
     }
+
 
     // Undo Castling Move
     if (lastmove.wasCastling) {

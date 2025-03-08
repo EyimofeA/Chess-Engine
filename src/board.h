@@ -69,9 +69,24 @@ struct lastMove{
     std::array<bool, 4> prevCastleRights;
     int prevEnPassantTarget;
     int prevHalfMoveClock;
+    int prevFullMoveNumber;
+    bool operator==(const lastMove& other) const {
+        return movedPiece == other.movedPiece &&
+               capturedPiece == other.capturedPiece &&
+               fromSquare == other.fromSquare &&
+               toSquare == other.toSquare &&
+               wasEnPassant == other.wasEnPassant &&
+               wasCastling == other.wasCastling &&
+               wasPromotion == other.wasPromotion &&
+               promotedPiece == other.promotedPiece &&
+               prevCastleRights == other.prevCastleRights &&
+               prevEnPassantTarget == other.prevEnPassantTarget &&
+               prevHalfMoveClock == other.prevHalfMoveClock;
+    }
+
     lastMove(const Piece &movedPiece, const Piece &capturedPiece, int fromSquare, int toSquare,
         bool wasEnPassant, bool wasCastling, bool wasPromotion, PieceType promotedPiece,
-        const std::array<bool, 4>& prevCastleRights, int prevEnPassantTarget, int prevHalfMoveClock)
+        const std::array<bool, 4>& prevCastleRights, int prevEnPassantTarget, int prevHalfMoveClock,int prevFullMoveNumber)
    : movedPiece(movedPiece),
      capturedPiece(capturedPiece),
      fromSquare(fromSquare),
@@ -82,7 +97,8 @@ struct lastMove{
      promotedPiece(promotedPiece),
      prevCastleRights(prevCastleRights),
      prevEnPassantTarget(prevEnPassantTarget),
-     prevHalfMoveClock(prevHalfMoveClock)
+     prevHalfMoveClock(prevHalfMoveClock),
+     prevFullMoveNumber(prevFullMoveNumber)
 {}
 };
 class Board {
@@ -103,6 +119,13 @@ public:
         board_from_fen_string(startFEN);
         std::vector<Move> moveList;        
     }
+    
+    bool operator==(const Board& other) const;
+    bool operator!=(const Board& other) const {
+        return !(*this == other);
+    }
+    
+    
 
     // Parses a FEN string and returns an array of Piece representing the board.
     void board_from_fen_string(const std::string& fen_string);

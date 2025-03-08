@@ -1,9 +1,77 @@
 #include "board.h"
+#include "moveGenerator.h"
 #include <iostream>
+#include <string>
 #include <vector>
 #include <cassert>
 #include <chrono>
 
+void compareBoards(Board board,Board boardBeforeMove){
+    if (board != boardBeforeMove) {
+        std::cout << "Error: Board state did not match after unMakeMove!\n";
+
+        // Compare board squares
+        // for (int i = 0; i < 64; i++) {
+        //     if (board.squares[i] != boardBeforeMove.squares[i]) {
+        //         std::cout << "Mismatch at square " << i 
+        //                 << " (board: " << board.squares[i].type 
+        //                 << ", " << board.squares[i].color 
+        //                 << " vs boardBeforeMove: " 
+        //                 << boardBeforeMove.squares[i].type 
+        //                 << ", " << boardBeforeMove.squares[i].color << ")\n";
+        //     }
+        // }
+
+        // Compare turn
+        if (board.turn != boardBeforeMove.turn) {
+            std::cout << "Turn mismatch! board: " << (board.turn == Color::WHITE ? "WHITE" : "BLACK")
+                    << " vs boardBeforeMove: " << (boardBeforeMove.turn == Color::WHITE ? "WHITE" : "BLACK") << "\n";
+        }
+
+        // Compare en passant target
+        if (board.enPassantTarget != boardBeforeMove.enPassantTarget) {
+            std::cout << "En passant target mismatch! board: " << board.enPassantTarget
+                    << " vs boardBeforeMove: " << boardBeforeMove.enPassantTarget << "\n";
+        }
+
+        // Compare half-move clock
+        if (board.halfMoveClock != boardBeforeMove.halfMoveClock) {
+            std::cout << "Half-move clock mismatch! board: " << board.halfMoveClock
+                    << " vs boardBeforeMove: " << boardBeforeMove.halfMoveClock << "\n";
+        }
+
+        // Compare full-move number
+        if (board.fullMoveNumber != boardBeforeMove.fullMoveNumber) {
+            std::cout << "Full-move number mismatch! board: " << board.fullMoveNumber
+                    << " vs boardBeforeMove: " << boardBeforeMove.fullMoveNumber << "\n";
+        }
+
+        // Compare castling rights
+        if (board.castleRights != boardBeforeMove.castleRights) {
+            std::cout << "Castling rights mismatch! board: ";
+            for (bool right : board.castleRights) std::cout << right << " ";
+            std::cout << " vs boardBeforeMove: ";
+            for (bool right : boardBeforeMove.castleRights) std::cout << right << " ";
+            std::cout << "\n";
+        }
+
+        // Compare move stack size
+        if (board.moveStack.size() != boardBeforeMove.moveStack.size()) {
+            std::cout << "Move stack size mismatch! board: " << board.moveStack.size()
+                    << " vs boardBeforeMove: " << boardBeforeMove.moveStack.size() << "\n";}
+        // } else {
+        //     // Compare individual moves
+        //     for (size_t i = 0; i < board.moveStack.size(); i++) {
+        //         if (board.moveStack[i] != boardBeforeMove.moveStack[i]) {
+        //             std::cout << "Move stack difference at index " << i << "\n";
+        //         }
+        //     }
+        // }
+
+        // Finally, trigger the assertion
+        assert(board == boardBeforeMove && "Error: Board state did not match after unMakeMove!");
+    }
+}
 // Exception type to signal that the time limit has been reached.
 struct TimeUpException {};
 
@@ -34,16 +102,18 @@ std::string moveToUCI(const Move& move) {
 }
 
 // Recursive perft function with optional printing and time-limit checking.
-unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves = false,
+unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves = false,std::vector<std::string> inputMoves = {},
     const std::chrono::steady_clock::time_point &endTime = std::chrono::steady_clock::time_point::max()) {
     // Check if the time limit has been reached.
     if (std::chrono::steady_clock::now() >= endTime){
         throw TimeUpException();
     }
-
+    depth -= inputMoves.size();
     if (depth == 0)
         return 1;
-
+    for (const auto &move:inputMoves){
+        board.makeMove(board.parseMove(move));
+    }
     unsigned long nodes = 0;
     std::vector<Move> moves;
     board.generateMoves(moves);
@@ -54,12 +124,12 @@ unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves
         // Check time again inside the loop.
         if (std::chrono::steady_clock::now() >= endTime)
             throw TimeUpException();
-
+        Board boardBeforeMove = board;
         std::string moveStr = moveToUCI(move);
         board.makeMove(move);
-        unsigned long childNodes = perft(board, depth - 1, false, printMoves, endTime);
+        unsigned long childNodes = perft(board, depth - 1, false, printMoves,{}, endTime);
         board.unMakeMove();
-
+        compareBoards(board, boardBeforeMove);
         if (isRoot && printMoves) {
             moveCounts.emplace_back(moveStr, childNodes);
         }
@@ -92,7 +162,7 @@ void measureNPS(Board &board) {
     try {
         while (true) {
             // Calling perft with printing disabled.
-            unsigned long nodes = perft(board, depth, true, false, endTime);
+            unsigned long nodes = perft(board, depth, true, false,{}, endTime);
             totalNodes += nodes;
             depth++;
         }
@@ -145,7 +215,23 @@ void runPerftTests() {
 
     std::cout << "All perft tests passed!\n";
 }
-
+// int main() {
+//     // std::cout << "Running perft tests...\n";
+//     // std::cout << "Measuring NPS for 10 seconds...\n";
+    
+//     Board board;
+//     board.board_from_fen_string("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+//     // Measure NPS with printing disabled.
+//     // measureNPS(board);
+    
+//     // For demonstration, run perft at depth 1 with printing enabled.
+//     std::cout << "Running perft tests...\n";
+//     perft(board, 7, true, true,{});
+    
+//     // Uncomment the next line to run the test suite.
+//     // runPerftTests();
+//     return 0;
+// }
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;

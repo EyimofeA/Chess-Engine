@@ -96,3 +96,15 @@ Move Board::parseMove(const std::string &uciMove) {
 
     return Move{startSquare, targetSquare, isCapture, isPromotion, isEnPassant, isCastling, promotionType};
 }
+
+
+bool Board::operator==(const Board& other) const {
+    return squares == other.squares &&
+           turn == other.turn &&
+           enPassantTarget == other.enPassantTarget &&
+           halfMoveClock == other.halfMoveClock &&
+           fullMoveNumber == other.fullMoveNumber &&
+           castleRights == other.castleRights &&
+           moveStack == other.moveStack;
+}
+
