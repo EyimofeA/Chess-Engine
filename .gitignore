@@ -16,3 +16,7 @@
 /*.out
 /CMakePresets.json
 /stockfish
+/perft_output.txt
+/perft_script.sh
+/somepython
+/.cache
