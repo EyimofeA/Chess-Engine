@@ -194,9 +194,9 @@ GameResult Board::checkGameState() {
     if (isThreefoldRepetition())
         return GameResult::DRAW_THREEFOLD;
     
-    // Check for draw by insufficient material.
-    if (isInsufficientMaterial())
-        return GameResult::DRAW_INSUFFICIENT_MATERIAL;
+    // // Check for draw by insufficient material.
+    // if (isInsufficientMaterial())
+    //     return GameResult::DRAW_INSUFFICIENT_MATERIAL;
     
     // Generate legal moves for the current side.
     std::vector<Move> moves;
@@ -214,4 +214,61 @@ GameResult Board::checkGameState() {
     
     // If none of the conditions apply, the game continues.
     return GameResult::ONGOING;
+}
+
+#include <sstream>
+
+std::string Board::getFEN() const {
+    std::ostringstream fen;
+    
+    // 1. **Board Representation**
+    for (int rank = 7; rank >= 0; --rank) { // Ranks go from 8 to 1
+        int emptyCount = 0;
+        for (int file = 0; file < 8; ++file) {
+            int square = rank * 8 + file;
+            const Piece& piece = squares[square];
+
+            if (piece.type == PieceType::NONE) {
+                emptyCount++;
+            } else {
+                if (emptyCount > 0) {
+                    fen << emptyCount; // Add empty squares count
+                    emptyCount = 0;
+                }
+                char pieceChar = piece.toChar();
+                fen << pieceChar;
+            }
+        }
+        if (emptyCount > 0) {
+            fen << emptyCount;
+        }
+        if (rank > 0) {
+            fen << '/'; // Separate ranks with '/'
+        }
+    }
+
+    // 2. **Active Color**
+    fen << " " << (turn == Color::WHITE ? 'w' : 'b');
+
+    // 3. **Castling Rights**
+    std::string castleRightsStr;
+    if (castleRights[0]) castleRightsStr += 'K'; // White kingside
+    if (castleRights[1]) castleRightsStr += 'Q'; // White queenside
+    if (castleRights[2]) castleRightsStr += 'k'; // Black kingside
+    if (castleRights[3]) castleRightsStr += 'q'; // Black queenside
+    fen << " " << (castleRightsStr.empty() ? "-" : castleRightsStr);
+
+    // 4. **En Passant Target Square**
+    fen << " " << (enPassantTarget != -1 ? squareToNotation(enPassantTarget) : "-");
+
+    // 5. **Halfmove Clock and Fullmove Number**
+    fen << " " << halfMoveClock << " " << fullMoveNumber;
+
+    return fen.str();
+}
+// Convert square index to notation (e.g., 0 → a1, 63 → h8)
+std::string Board::squareToNotation(int square) const {
+    char file = 'a' + (square % 8);
+    char rank = '1' + (square / 8);
+    return std::string(1, file) + std::string(1, rank);
 }

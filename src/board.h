@@ -16,6 +16,7 @@ public:
     int enPassantTarget;  // -1 if no en passant, else square index
     int halfMoveClock; // For the 50-move rule.
     int fullMoveNumber;            
+    int nodeSearched;
     std::array<bool, 4> castleRights; // e.g., {true, true, true, true} for KQkq
     std::vector<lastMove> moveStack;
     ZobristArray initZobrist;
@@ -64,6 +65,9 @@ public:
     // Prints the board to the console.
     void printBoard() const;
     Move parseMove(const std::string &uciMove);
+
+    std::string squareToNotation(int square) const ;
+    std::string getFEN() const;
 private:
     std::vector<uint64_t> positionHistory;  // Stores board state hashes for threefold repetition
     uint64_t computeZobristHash();          // Computes a unique board hash

@@ -47,7 +47,7 @@ enum class GameResult {
     BLACK_CHECKMATE
 };
 struct ZobristArray{
-    std::array<std::array<uint64_t, 64>, 12> ZobristArray;
+    std::array<std::array<uint64_t, 12>, 64> ZobristArray;
     int blackToMove; //1 when black is to move
     std::array<uint64_t, 4> castleRights;
     std::array<uint64_t, 8> enPassantFiles;

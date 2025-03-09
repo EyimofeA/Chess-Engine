@@ -4,9 +4,23 @@
 
 // Define heuristic function
 int heuristic(Board& board) {
-    return 0;  // Placeholder
-}
+    int myMaterial = 0;
+    int opponentMaterial = 0;
 
+    for (const auto& piece : board.squares) {
+        if (piece.type == PieceType::NONE) continue; // Skip empty squares
+
+        int pieceValue = pieceValues[static_cast<int>(piece.type)];
+
+        if (piece.color == board.turn) {
+            myMaterial += pieceValue;
+        } else {
+            opponentMaterial += pieceValue;
+        }
+    }
+
+    return myMaterial - opponentMaterial;
+}
 // Define evaluation function
 int evaluate(Board& board) {
     GameResult gameResult = board.checkGameState();
