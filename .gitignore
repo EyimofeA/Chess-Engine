@@ -1,22 +1,41 @@
+# IDE and editor settings
 .vscode/
-# Ignore CMake build directories
-/build*/   
+
+# --- CMake Build Artifacts ---
 /CMakeCache.txt
 /CMakeFiles/
-/Makefile
+/cmake_install.cmake
 /build.ninja
-/*.ninja_deps
-/*.ninja_log
-/*.o
-/*.a
-/*.so
-/*.exe
-/*.dll
-/*.bin
-/*.out
+/Makefile
 /CMakePresets.json
+
+# --- CMake & Test Configuration Files ---
+/CMakeLists.txt
+/tests/CMakeLists.txt
+/CTestTestfile.cmake
+/tests/CTestTestfile.cmake
+/tests/CMakeFiles
+/tests/cmake_install.cmake
+
+# --- Testing Temporary Files ---
+/Testing/Temporary/
+
+# --- Build Directories & General Artifacts ---
+/build*/
+*.ninja_deps
+*.ninja_log
+*.o
+*.a
+*.so
+*.exe
+*.dll
+*.bin
+*.out
+
+# --- Other Generated Files ---
 /stockfish
 /perft_output.txt
 /perft_script.sh
 /somepython
 /.cache
+/Testing
