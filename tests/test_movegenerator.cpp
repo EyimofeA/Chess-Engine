@@ -1,5 +1,6 @@
 // tests/test_movegenerator.cpp
 #include "board.h"
+#include "moveGenerator.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
@@ -7,7 +8,7 @@
 // Helper: check if a move from a given start to target exists in the moves list.
 bool moveExists(const std::vector<Move>& moves, int start, int target) {
     for (const auto &move : moves) {
-        if (move.startSquare == start && move.targetSquare == target)
+        if (move.from == start && move.to == target)
             return true;
     }
     return false;
@@ -34,7 +35,7 @@ void testKnightMoves() {
     // White knight in starting position is at index 1.
     bool knightMoveFound = false;
     for (const auto &move : moves) {
-        if (move.startSquare == 1) {
+        if (move.from == 1) {
             knightMoveFound = true;
             break;
         }
@@ -58,7 +59,7 @@ void testSlidingMoves() {
     board.squares[bishopIndex].color = Color::WHITE;
 
     std::vector<Move> moves;
-    board.generateSlidingMoves(bishopIndex, moves, /*diagonal=*/true, /*straight=*/false);
+    generateSlidingMoves(board, bishopIndex, moves, /*diagonal=*/true, /*straight=*/false);
     assert(!moves.empty() && "No sliding moves generated for bishop.");
     std::cout << "Sliding moves test passed.\n";
 }
@@ -77,7 +78,7 @@ void testKingMoves() {
     board.squares[kingIndex].color = Color::WHITE;
 
     std::vector<Move> moves;
-    board.generateKingMoves(kingIndex, moves);
+    generateKingMoves(board, kingIndex, moves);
     assert(!moves.empty() && "King moves not generated.");
     std::cout << "King moves test passed.\n";
 }
@@ -96,13 +97,9 @@ void testMakeAndUndoMove() {
 
     // Prepare a move for the pawn.
     Move move;
-    move.startSquare = startSquare;
-    move.targetSquare = targetSquare;
-    move.isCapture = false;
-    move.isPromotion = false;
-    move.isEnPassant = false;
-    move.isCastling = false;
-    move.promotionType = PieceType::NONE;
+    move.from = startSquare;
+    move.to = targetSquare;
+    move.flags = 0;  // No special flags for this move
     
     // Save the state of the target square before the move.
     Piece targetBefore = board.squares[targetSquare];

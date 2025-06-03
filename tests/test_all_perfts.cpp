@@ -12,13 +12,13 @@ std::string tmep(int square) {
     return std::string(1, file) + std::string(1, rank);
 }
 std::string moveToUCI(const Move& move) {
-    std::string from = tmep(move.startSquare);
-    std::string to = tmep(move.targetSquare);
+    std::string from = tmep(move.from);
+    std::string to = tmep(move.to);
 
     // If it's a promotion, append the promotion piece symbol in lowercase.
-    if (move.isPromotion) {
+    if (move.flags & Move::FLAG_PROMOTION) {
         char promoChar;
-        switch (move.promotionType) {
+        switch (static_cast<PieceType>(move.promotion)) {
             case PieceType::QUEEN:  promoChar = 'q'; break;
             case PieceType::ROOK:   promoChar = 'r'; break;
             case PieceType::BISHOP: promoChar = 'b'; break;

@@ -65,3 +65,21 @@ std::pair<int, Move> AlphaBeta(Board& board, int depth, int alpha, int beta,size
 
     return {alpha, bestMove};
 }
+
+// TODO: Implement iterative deepening  
+std::pair<int, Move> iterativeDeepening(Board& board, int depth) {
+    size_t nodesSearched = 0;
+    int bestScore = NEG_INF;
+    Move bestMove;
+    
+    for (int d = 1; d <= depth; ++d) {
+        auto result = AlphaBeta(board, d, NEG_INF, POS_INF, nodesSearched);
+        if (result.first > bestScore) {
+            bestScore = result.first;
+            bestMove = result.second;
+        }
+    }
+
+    
+    return {bestScore, bestMove};
+}

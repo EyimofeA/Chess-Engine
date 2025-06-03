@@ -76,20 +76,20 @@ void compareBoards(Board board,Board boardBeforeMove){
 struct TimeUpException {};
 
 // Helper function to convert a square index to UCI notation.
-std::string tmep(int square) {
+std::string squareToUCI(int square) {
     char file = 'a' + (square % 8);
     char rank = '1' + (square / 8);
     return std::string(1, file) + std::string(1, rank);
 }
 
 std::string moveToUCI(const Move& move) {
-    std::string from = tmep(move.startSquare);
-    std::string to = tmep(move.targetSquare);
+    std::string from = squareToUCI(move.from);
+    std::string to = squareToUCI(move.to);
 
     // If it's a promotion, append the promotion piece symbol in lowercase.
-    if (move.isPromotion) {
+    if (move.flags & Move::FLAG_PROMOTION) {
         char promoChar;
-        switch (move.promotionType) {
+        switch (static_cast<PieceType>(move.promotion)) {
             case PieceType::QUEEN:  promoChar = 'q'; break;
             case PieceType::ROOK:   promoChar = 'r'; break;
             case PieceType::BISHOP: promoChar = 'b'; break;
@@ -198,72 +198,119 @@ void testPerft(const std::string& fen, const std::vector<unsigned long>& expecte
 
 void runPerftTests() {
     std::cout << "Testing Standard Starting Position...\n";
-    // testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    //           {20, 8902, 197281, 4865609, 119060324});
+    // Standard starting position perft values
+    std::vector<unsigned long> standardPerft = {
+        20,      // depth 1
+        400,     // depth 2
+        8902,    // depth 3
+        197281,  // depth 4
+        4865609, // depth 5
+        119060324 // depth 6
+    };
+    testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", standardPerft);
 
-    std::cout << "Testing Kiwipete Position...\n";
-    testPerft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ",
-              {48, 2039, 97862, 4085603, 193690690});
+    std::cout << "\nTesting Kiwipete Position...\n";
+    // Kiwipete position perft values
+    std::vector<unsigned long> kiwipetePerft = {
+        48,      // depth 1
+        2039,    // depth 2
+        97862,   // depth 3
+        4085603  // depth 4
+    };
+    testPerft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", kiwipetePerft);
 
-    // std::cout << "Testing Stalemate Position...\n";
-    // testPerft("7k/5Q2/8/8/8/8/8/6K1 b - - 0 1",
-    //           {0, 0, 0, 0, 0});
+    std::cout << "\nTesting Position 3...\n";
+    // Position 3 perft values
+    std::vector<unsigned long> pos3Perft = {
+        14,      // depth 1
+        191,     // depth 2
+        2812,    // depth 3
+        43238,   // depth 4
+        674624   // depth 5
+    };
+    testPerft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", pos3Perft);
 
-    // std::cout << "Testing Checkmate Position...\n";
-    // testPerft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBN1 w Qkq - 0 1",
-    //           {1, 1, 1, 1, 1}); // Only 1 move available, game ends
+    std::cout << "\nTesting Position 4...\n";
+    // Position 4 perft values
+    std::vector<unsigned long> pos4Perft = {
+        6,       // depth 1
+        264,     // depth 2
+        9467,    // depth 3
+        422333   // depth 4
+    };
+    testPerft("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", pos4Perft);
 
-    std::cout << "All perft tests passed!\n";
+    std::cout << "\nTesting Position 5...\n";
+    // Position 5 perft values
+    std::vector<unsigned long> pos5Perft = {
+        44,      // depth 1
+        1486,    // depth 2
+        62379,   // depth 3
+        2103487  // depth 4
+    };
+    testPerft("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", pos5Perft);
+
+    std::cout << "\nTesting Position 6...\n";
+    // Position 6 perft values
+    std::vector<unsigned long> pos6Perft = {
+        46,      // depth 1
+        1079,    // depth 2
+        44077,   // depth 3
+        1936790  // depth 4
+    };
+    testPerft("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", pos6Perft);
+
+    std::cout << "\nAll perft tests passed!\n";
 }
-// int main() {
-//     // std::cout << "Running perft tests...\n";
-//     // std::cout << "Measuring NPS for 10 seconds...\n";
-    
-//     Board board;
-//     board.board_from_fen_string("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
-//     // Measure NPS with printing disabled.
-//     // measureNPS(board);
-    
-//     // For demonstration, run perft at depth 1 with printing enabled.
-//     std::cout << "Running perft tests...\n";
-//     perft(board, 7, true, true,{});
-    
-//     // Uncomment the next line to run the test suite.
-//     // runPerftTests();
-//     return 0;
-// }
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;
+
+int main() {
+    try {
+        runPerftTests();
+        
+        // Run NPS measurement
+        Board board;
+        board.board_from_fen_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        std::cout << "\nMeasuring NPS...\n";
+        measureNPS(board);
+        
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
-    int depth = std::stoi(argv[1]);
-
-    // Properly construct the FEN string in case it has spaces
-    std::string fen = argv[2];
-    for (int i = 3; i < argc && std::string(argv[i]) != "--"; ++i) {
-        fen += " ";
-        fen += argv[i];
-    }
-
-    Board board;
-    board.board_from_fen_string(fen);
-
-    // Parse moves if provided
-    for (int i = 3; i < argc; ++i) {
-        std::string moveStr = argv[i];
-        try {
-            Move move = board.parseMove(moveStr);
-            board.makeMove(move);
-        } catch (const std::exception &e) {
-            std::cerr << "Invalid move: " << moveStr << " - " << e.what() << std::endl;
-            return 1;
-        }
-    }
-
-    // Run perft and print the result
-    perft(board, depth, true, true);
-    
-    return 0;
 }
+// int main(int argc, char* argv[]) {
+//     if (argc < 3) {
+//         std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;
+//         return 1;
+//     }
+
+//     int depth = std::stoi(argv[1]);
+
+//     // Properly construct the FEN string in case it has spaces
+//     std::string fen = argv[2];
+//     for (int i = 3; i < argc && std::string(argv[i]) != "--"; ++i) {
+//         fen += " ";
+//         fen += argv[i];
+//     }
+
+//     Board board;
+//     board.board_from_fen_string(fen);
+
+//     // Parse moves if provided
+//     for (int i = 3; i < argc; ++i) {
+//         std::string moveStr = argv[i];
+//         try {
+//             Move move = board.parseMove(moveStr);
+//             board.makeMove(move);
+//         } catch (const std::exception &e) {
+//             std::cerr << "Invalid move: " << moveStr << " - " << e.what() << std::endl;
+//             return 1;
+//         }
+//     }
+
+//     // Run perft and print the result
+//     perft(board, depth, true, true);
+    
+//     return 0;
+// }

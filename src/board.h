@@ -6,12 +6,16 @@
 #include <cctype>
 #include <vector>
 #include "types.h"
-#include "moveGenerator.h"// Represent the type of piece.
+#include "moveGenerator.h"
 
 class Board {
 public:
-    // Use an array of 64 Piece objects to represent the board.
+    // Core board representation
     std::array<Piece, 64> squares;
+    std::array<PieceList, 12> pieceLists;  // 6 piece types * 2 colors
+    AttackTables attackTables;
+    
+    // Game state
     Color turn;                    // Whose turn it is.
     int enPassantTarget;  // -1 if no en passant, else square index
     int halfMoveClock; // For the 50-move rule.
@@ -22,11 +26,11 @@ public:
     ZobristArray initZobrist;
     // Starting FEN for the standard chess starting position.
     const std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    // std::vector<Move> moveList;   
+    
     // Public constructor.
     Board() {
         board_from_fen_string(startFEN); 
-        
+        attackTables.initialize();
     }
     
     bool operator==(const Board& other) const;
@@ -43,35 +47,34 @@ public:
     // Parses a FEN string and returns an array of Piece representing the board.
     void board_from_fen_string(const std::string& fen_string);
 
-    // generate legal board moves
-    void generateMoves(std::vector<Move>& moveList);
-    void generatePawnMoves(int square, std::vector<Move>& moveList);
-    void generateKnightMoves(int square, std::vector<Move>& moveList);
-    void generateSlidingMoves(int square, std::vector<Move>& moveList, bool diagonal=false, bool straight =false);
-    void generateKingMoves(int square, std::vector<Move>& moveList);
-    void generateCastlingMoves(std::vector<Move>& moveList);
-    void generateEnPassantMoves(std::vector<Move>& moveList);
-
     bool isKingInCheck(Color side);
     bool isSquareAttacked(int Square, Color side);
     bool isMoveLegal(Move move);
 
+    // Move generation functions
+    void generateMoves(std::vector<Move>& moveList);
+
     // make a move
-    void makeMove(Move move);
+    void makeMove(const Move& move);
     // unmake the most recent move
     void unMakeMove();
-
 
     // Prints the board to the console.
     void printBoard() const;
     Move parseMove(const std::string &uciMove);
 
-    std::string squareToNotation(int square) const ;
+    std::string squareToNotation(int square) const;
     std::string getFEN() const;
 private:
     std::vector<uint64_t> positionHistory;  // Stores board state hashes for threefold repetition
     uint64_t computeZobristHash();          // Computes a unique board hash
     void initZobristArray();
+    
+    // Helper functions for piece list management
+    void updatePieceLists();
+    int getPieceListIndex(PieceType type, Color color) const;
+    void addPieceToLists(int square, Piece piece);
+    void removePieceFromLists(int square);
 };
 
 #endif // BOARD_H

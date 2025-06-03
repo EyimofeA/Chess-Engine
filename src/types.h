@@ -52,4 +52,62 @@ struct ZobristArray{
     std::array<uint64_t, 4> castleRights;
     std::array<uint64_t, 8> enPassantFiles;
 };
+
+// Optimized move representation using bit fields
+struct Move {
+    unsigned short from : 6;      // 6 bits for source square (0-63)
+    unsigned short to : 6;        // 6 bits for target square (0-63)
+    unsigned short flags : 4;     // 4 bits for move flags
+    unsigned short promotion : 3; // 3 bits for promotion piece type
+    unsigned short padding : 1;   // 1 bit padding for alignment
+
+    // Move flags
+    static constexpr unsigned short FLAG_CAPTURE = 1;
+    static constexpr unsigned short FLAG_PROMOTION = 2;
+    static constexpr unsigned short FLAG_EN_PASSANT = 4;
+    static constexpr unsigned short FLAG_CASTLING = 8;
+
+    bool isCapture() const { return (flags & FLAG_CAPTURE) != 0; }
+    bool isPromotion() const { return (flags & FLAG_PROMOTION) != 0; }
+    bool isEnPassant() const { return (flags & FLAG_EN_PASSANT) != 0; }
+    bool isCastling() const { return (flags & FLAG_CASTLING) != 0; }
+    PieceType getPromotionType() const { return static_cast<PieceType>(promotion); }
+};
+
+// Piece list structure for efficient piece tracking
+struct PieceList {
+    std::array<int, 16> pieces;  // Store piece square indices (max 16 pieces per type)
+    int count;                   // Current number of pieces
+    PieceType type;              // Type of pieces in this list
+    Color color;                 // Color of pieces in this list
+
+    void add(int square) {
+        if (count < 16) pieces[count++] = square;
+    }
+
+    void remove(int square) {
+        for (int i = 0; i < count; i++) {
+            if (pieces[i] == square) {
+                pieces[i] = pieces[--count];
+                break;
+            }
+        }
+    }
+
+    void clear() {
+        count = 0;
+    }
+};
+
+// Pre-computed attack tables
+struct AttackTables {
+    std::array<uint64_t, 64> knightAttacks;    // Knight attack patterns
+    std::array<uint64_t, 64> kingAttacks;      // King attack patterns
+    std::array<uint64_t, 64> pawnAttacks[2];   // Pawn attack patterns for both colors
+    std::array<uint64_t, 64> bishopMasks;      // Bishop sliding piece masks
+    std::array<uint64_t, 64> rookMasks;        // Rook sliding piece masks
+    
+    void initialize();  // Will be implemented in board.cpp
+};
+
 #endif // TYPES_H
