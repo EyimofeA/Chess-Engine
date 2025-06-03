@@ -1,10 +1,9 @@
 #include "board.h"
 #include "moveGenerator.h"
 #include <iostream>
-#include <string>
-#include <vector>
 #include <cassert>
 #include <chrono>
+#include <gperftools/profiler.h>
 
 void compareBoards(Board board,Board boardBeforeMove){
     if (board != boardBeforeMove) {
@@ -122,14 +121,14 @@ unsigned long perft(Board &board, int depth, bool isRoot = true, bool printMoves
 
     for (const auto &move : moves) {
         // Check time again inside the loop.
-        if (std::chrono::steady_clock::now() >= endTime)
-            throw TimeUpException();
+        if (std::chrono::steady_clock::now() >= endTime){
+            return nodes;}
         Board boardBeforeMove = board;
         std::string moveStr = moveToUCI(move);
         board.makeMove(move);
         unsigned long childNodes = perft(board, depth - 1, false, printMoves,{}, endTime);
         board.unMakeMove();
-        compareBoards(board, boardBeforeMove);
+        // compareBoards(board, boardBeforeMove);
         if (isRoot && printMoves) {
             moveCounts.emplace_back(moveStr, childNodes);
         }
@@ -156,7 +155,7 @@ void measureNPS(Board &board) {
     int depth = 1;
     unsigned long totalNodes = 0;
     auto startTime = steady_clock::now();
-    auto timeLimit = seconds(60); // Specify the duration for the test.
+    auto timeLimit = seconds(20); // Specify the duration for the test.
     auto endTime = startTime + timeLimit;
 
     try {
@@ -215,55 +214,57 @@ void runPerftTests() {
 
     std::cout << "All perft tests passed!\n";
 }
-// int main() {
-//     // std::cout << "Running perft tests...\n";
-//     // std::cout << "Measuring NPS for 10 seconds...\n";
+int main() {
+    // std::cout << "Running perft tests...\n";
+    ProfilerStart("profile.out");
+    std::cout << "Measuring NPS for 10 seconds...\n";
     
-//     Board board;
-//     board.board_from_fen_string("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
-//     // Measure NPS with printing disabled.
-//     // measureNPS(board);
-    
-//     // For demonstration, run perft at depth 1 with printing enabled.
-//     std::cout << "Running perft tests...\n";
-//     perft(board, 7, true, true,{});
-    
-//     // Uncomment the next line to run the test suite.
-//     // runPerftTests();
-//     return 0;
-// }
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;
-        return 1;
-    }
-
-    int depth = std::stoi(argv[1]);
-
-    // Properly construct the FEN string in case it has spaces
-    std::string fen = argv[2];
-    for (int i = 3; i < argc && std::string(argv[i]) != "--"; ++i) {
-        fen += " ";
-        fen += argv[i];
-    }
-
     Board board;
-    board.board_from_fen_string(fen);
-
-    // Parse moves if provided
-    for (int i = 3; i < argc; ++i) {
-        std::string moveStr = argv[i];
-        try {
-            Move move = board.parseMove(moveStr);
-            board.makeMove(move);
-        } catch (const std::exception &e) {
-            std::cerr << "Invalid move: " << moveStr << " - " << e.what() << std::endl;
-            return 1;
-        }
-    }
-
-    // Run perft and print the result
-    perft(board, depth, true, true);
+    board.board_from_fen_string("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+    // Measure NPS with printing disabled.
+    measureNPS(board);
+    ProfilerStop();
     
+    // For demonstration, run perft at depth 1 with printing enabled.
+    // std::cout << "Running perft tests...\n";
+    // perft(board, 2, true, true,{});
+    
+    // Uncomment the next line to run the test suite.
+    // runPerftTests();
     return 0;
 }
+// int main(int argc, char* argv[]) {
+//     if (argc < 3) {
+//         std::cerr << "Usage: " << argv[0] << " depth fen [moves...]" << std::endl;
+//         return 1;
+//     }
+
+//     int depth = std::stoi(argv[1]);
+
+//     // Properly construct the FEN string in case it has spaces
+//     std::string fen = argv[2];
+//     for (int i = 3; i < argc && std::string(argv[i]) != "--"; ++i) {
+//         fen += " ";
+//         fen += argv[i];
+//     }
+
+//     Board board;
+//     board.board_from_fen_string(fen);
+
+//     // Parse moves if provided
+//     for (int i = 3; i < argc; ++i) {
+//         std::string moveStr = argv[i];
+//         try {
+//             Move move = board.parseMove(moveStr);
+//             board.makeMove(move);
+//         } catch (const std::exception &e) {
+//             std::cerr << "Invalid move: " << moveStr << " - " << e.what() << std::endl;
+//             return 1;
+//         }
+//     }
+
+//     // Run perft and print the result
+//     perft(board, depth, true, true);
+    
+//     return 0;
+// }

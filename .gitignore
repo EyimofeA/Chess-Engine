@@ -39,3 +39,10 @@
 /somepython
 /.cache
 /Testing
+
+callgraph.dot
+chess
+flame.svg
+otool
+/bin
+tests/Makefile

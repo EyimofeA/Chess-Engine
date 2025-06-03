@@ -4,7 +4,9 @@
 #include "board.h"
 #include "types.h"
 
-
+inline bool isOnBoard(int square) {
+    return square >= 0 && square < 64;
+}
 // Main move generation: iterate over all squares and generate moves for pieces of the current side.
 std::string squareToNotation(int square) {
     char file = 'a' + (square % 8);
@@ -422,7 +424,7 @@ bool Board::isKingInCheck(Color side) {
 
 // --- isMoveLegal Implementation (requires makeMove/unMakeMove) ---
 // Note: Since makeMove and unMakeMove are not implemented yet, this is a placeholder.
-bool Board::isMoveLegal(Move move) {
+bool Board::isMoveLegal(const Move& move) {
     // Apply the move temporarily.
     Color side = turn;
     makeMove(move);
@@ -433,7 +435,7 @@ bool Board::isMoveLegal(Move move) {
     return legal;
 }
 
-void Board::makeMove(Move move) {
+void Board::makeMove(const Move& move) {
     Piece piece = squares[move.startSquare];
     Piece capturedPiece = squares[move.targetSquare];
     Piece emptySquare = {PieceType::NONE, Color::NONE}; 

@@ -7,8 +7,8 @@
 #include <cstdlib> // For system()
 #include <sstream>
 
-constexpr int SEARCH_DEPTH = 5;
-constexpr int NUM_MOVES = 10;
+constexpr int SEARCH_DEPTH = 7;
+constexpr int NUM_MOVES = 100;
 
 std::string runStockfish(std::string position) {
     std::string command = "echo \"" + position + "\ngo depth 5\nquit\" | stockfish";

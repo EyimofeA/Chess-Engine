@@ -54,10 +54,10 @@ public:
 
     bool isKingInCheck(Color side);
     bool isSquareAttacked(int Square, Color side);
-    bool isMoveLegal(Move move);
+    bool isMoveLegal(const Move& move);
 
     // make a move
-    void makeMove(Move move);
+    void makeMove(const Move& move);
     // unmake the most recent move
     void unMakeMove();
 

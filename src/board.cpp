@@ -14,7 +14,7 @@ void Board::board_from_fen_string(const std::string& fen_string) {
     squares.fill({PieceType::NONE, Color::NONE}); 
     
     // Map from FEN character (lowercase) to PieceType.
-    std::unordered_map<char, PieceType> pieceFromSymbol = {
+    static const std::unordered_map<char, PieceType> pieceFromSymbol = {
         {'k', PieceType::KING},
         {'q', PieceType::QUEEN},
         {'r', PieceType::ROOK},
@@ -42,9 +42,9 @@ void Board::board_from_fen_string(const std::string& fen_string) {
         } else {
             int index = rank * 8 + file;
             Piece& piece = squares[index];
-            piece.type = pieceFromSymbol[std::tolower(c)];
+            piece.type = pieceFromSymbol.at(std::tolower(c));
             piece.color = std::isupper(c) ? Color::WHITE : Color::BLACK;
-            file++;
+            ++file;
         }
     }
     
@@ -122,6 +122,7 @@ bool Board::operator==(const Board& other) const {
 // Fifty-Move Rule Enforcement (simple counter tracking)
 bool Board::isStalemate(){
     std::vector<Move> moves;
+    moves.reserve(64);
     generateMoves(moves);
     return moves.empty() && !isKingInCheck(turn);
 }
@@ -141,39 +142,43 @@ void Board::initZobristArray() {
     }
     initZobrist.blackToMove = dist(rng);
     
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; ++i) {
         initZobrist.castleRights[i] = dist(rng);
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; ++i) {
         initZobrist.enPassantFiles[i] = dist(rng);
     }
 }
 
 uint64_t Board::computeZobristHash() {
-    uint64_t hash = 0;
+    // Start with the "side to move" value.
+    uint64_t hash = (turn == Color::BLACK) ? initZobrist.blackToMove : 0;
 
-    if (turn == Color::BLACK) {
-        hash ^= initZobrist.blackToMove;
-    }
-
-    for (int i = 0; i < 64; i++) {
-        if (squares[i].type != PieceType::NONE) {
-            int pieceIndex = static_cast<int>(squares[i].type) + (squares[i].color == Color::WHITE ? 0 : 6);
+    // Iterate over all 64 squares.
+    for (int i = 0; i < 64; ++i) {
+        const Piece &piece = squares[i];
+        if (piece.type != PieceType::NONE) {
+            // Compute piece index quickly: 0-5 for white, 6-11 for black.
+            int pieceIndex = static_cast<int>(piece.type) + ((piece.color == Color::WHITE) ? 0 : 6);
             hash ^= initZobrist.ZobristArray[i][pieceIndex];
         }
     }
 
-    for (int i = 0; i < 4; i++) {
-        hash ^= initZobrist.castleRights[i];
-    }
+    // Unroll the castling rights loop manually.
+    hash ^= initZobrist.castleRights[0];
+    hash ^= initZobrist.castleRights[1];
+    hash ^= initZobrist.castleRights[2];
+    hash ^= initZobrist.castleRights[3];
 
+    // Use bitmask to compute file index for en passant target.
     if (enPassantTarget != -1) {
-        hash ^= initZobrist.enPassantFiles[enPassantTarget % 8];
+        hash ^= initZobrist.enPassantFiles[enPassantTarget & 7];
     }
 
     return hash;
 }
+
 bool Board::isThreefoldRepetition() {
     // Ensure positionHistory is updated in makeMove/unMakeMove.
     uint64_t currentHash = computeZobristHash();
