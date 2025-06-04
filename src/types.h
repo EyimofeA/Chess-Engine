@@ -3,6 +3,7 @@
 #define TYPES_H
 #include <cctype>
 #include <array>
+#include <cstdint>
 enum class PieceType { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,NONE };
 enum class Color { WHITE, BLACK, NONE };
 enum Square {
