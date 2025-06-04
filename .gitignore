@@ -1,5 +1,7 @@
 # IDE and editor settings
 .vscode/
+.idea/
+.cache/
 
 # --- CMake Build Artifacts ---
 /CMakeCache.txt
@@ -8,40 +10,57 @@
 /build.ninja
 /CMakePresets.json
 
-# --- CMake & Test Configuration Files ---
-/CMakeLists.txt
-/tests/CMakeLists.txt
-/CTestTestfile.cmake
-/tests/CTestTestfile.cmake
-/tests/CMakeFiles
-/tests/cmake_install.cmake
+# Build directories
+build*/
+bin/
 
-# --- Testing Temporary Files ---
-/Testing/Temporary/
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+cmake_install.cmake
+Makefile
+compile_commands.json
+install_manifest.txt
+CTestTestfile.cmake
+CMakePresets.json
+CMakeUserPresets.json
 
-# --- Build Directories & General Artifacts ---
-/build*/
+# Ninja build files
 *.ninja_deps
 *.ninja_log
+
+# Object and binary files
 *.o
+*.slo
+*.lo
+*.obj
 *.a
+*.lai
+*.la
 *.so
-*.exe
+*.dylib
 *.dll
+*.exe
 *.bin
 *.out
+*.app
 
-# --- Other Generated Files ---
-/stockfish
-/perft_output.txt
-/perft_script.sh
-/somepython
-/.cache
-/Testing
-
-callgraph.dot
-chess
-flame.svg
-otool
-/bin
+# Test build artifacts
+tests/CMakeFiles/
+tests/CTestTestfile.cmake
+tests/cmake_install.cmake
 tests/Makefile
+Testing/
+Testing/Temporary/
+
+# Misc generated files
+stockfish
+perft_output.txt
+perft_script.sh
+somepython
+callgraph.dot
+flame.svg
+chess
+otool
+
