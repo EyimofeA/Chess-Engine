@@ -5,6 +5,7 @@
 #include <string>
 #include <cctype>
 #include <vector>
+#include <cstdint>
 #include "types.h"
 #include "moveGenerator.h"// Represent the type of piece.
 
