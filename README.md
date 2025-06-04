@@ -17,9 +17,9 @@ This chess engine implements core chess functionality, including move generation
 
 ### Building
 
+Use the provided `Makefile` to build the command line engine used by the GUI:
+
 ```bash
-mkdir build && cd build
-cmake ..
 make
 ```
 
@@ -29,15 +29,21 @@ make
 ./test_perft <depth> "<fen_string>" [moves...]
 ```
 
-### Playing vs. Stockfish
+### Playing with the GUI
 
-Ensure Stockfish is installed and in your PATH.
+First install the Python dependency:
 
 ```bash
-./chess
+pip install python-chess
 ```
 
-The engine interacts via standard input/output.
+Then run the Tkinter based GUI:
+
+```bash
+python3 gui.py
+```
+
+The GUI allows choosing the search depth and algorithm before each engine move.
 
 ## Dependencies
 

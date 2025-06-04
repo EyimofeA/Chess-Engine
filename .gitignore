@@ -3,6 +3,13 @@
 .idea/
 .cache/
 
+# --- CMake Build Artifacts ---
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/build.ninja
+/CMakePresets.json
+
 # Build directories
 build*/
 bin/
