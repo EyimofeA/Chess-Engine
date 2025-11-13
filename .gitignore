@@ -67,4 +67,6 @@ otool
 # Compiled engine binaries
 engine
 benchmark
+simple_perft
+perft_test
 
