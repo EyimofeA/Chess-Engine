@@ -56,6 +56,29 @@ void Board::board_from_fen_string(const std::string& fen_string) {
         castlingPart.find('Q') != std::string::npos,
         castlingPart.find('k') != std::string::npos,
         castlingPart.find('q') != std::string::npos };
+
+    // Build piece lists and find king positions
+    whitePieces.clear();
+    blackPieces.clear();
+    whiteKingSquare = -1;
+    blackKingSquare = -1;
+
+    for (int square = 0; square < 64; square++) {
+        const Piece& piece = squares[square];
+        if (piece.type == PieceType::NONE) continue;
+
+        if (piece.color == Color::WHITE) {
+            whitePieces.push_back(square);
+            if (piece.type == PieceType::KING) {
+                whiteKingSquare = square;
+            }
+        } else {
+            blackPieces.push_back(square);
+            if (piece.type == PieceType::KING) {
+                blackKingSquare = square;
+            }
+        }
+    }
 }
 
 // Print the board in a human-friendly format.

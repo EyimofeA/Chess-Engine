@@ -1,6 +1,7 @@
 #include <array>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include "board.h"
 #include "types.h"
 
@@ -18,10 +19,11 @@ void Board::generateMoves(std::vector<Move>& moveList) {
     std::vector<Move> pseudoLegalMoves;
     pseudoLegalMoves.reserve(256);
 
-    for (int square = 0; square < 64; square++) {
-        const Piece piece = squares[square];
-        if (piece.type == PieceType::NONE || piece.color != turn)
-            continue; // Skip empty squares and opponent's pieces
+    // Use piece list instead of iterating over all 64 squares
+    const std::vector<int>& pieces = (turn == Color::WHITE) ? whitePieces : blackPieces;
+
+    for (int square : pieces) {
+        const Piece& piece = squares[square];
 
         switch (piece.type) {
             case PieceType::PAWN:
@@ -408,14 +410,8 @@ bool Board::isSquareAttacked(int square, Color side) {
 }
 // --- isKingInCheck Implementation ---
 bool Board::isKingInCheck(Color side) {
-    int kingPos = -1;
-    // Find the king's position for the given side.
-    for (int square = 0; square < 64; square++) {
-        if (squares[square].type == PieceType::KING && squares[square].color == side) {
-            kingPos = square;
-            break;
-        }
-    }
+    // Use precomputed king position instead of searching
+    int kingPos = (side == Color::WHITE) ? whiteKingSquare : blackKingSquare;
     if (kingPos == -1) return false; // Should not happen.
 
     return isSquareAttacked(kingPos, side);
@@ -486,13 +482,32 @@ void Board::makeMove(const Move& move) {
             }
         }
     }
+    // Update piece lists: remove piece from startSquare
+    std::vector<int>& friendlyPieces = (piece.color == Color::WHITE) ? whitePieces : blackPieces;
+    std::vector<int>& enemyPieces = (piece.color == Color::WHITE) ? blackPieces : whitePieces;
+
+    auto it = std::find(friendlyPieces.begin(), friendlyPieces.end(), move.startSquare);
+    if (it != friendlyPieces.end()) {
+        *it = friendlyPieces.back();  // Swap with last element
+        friendlyPieces.pop_back();
+    }
+
+    // Remove captured piece from opponent's list (if normal capture)
+    if (move.isCapture && !move.isEnPassant) {
+        auto capIt = std::find(enemyPieces.begin(), enemyPieces.end(), move.targetSquare);
+        if (capIt != enemyPieces.end()) {
+            *capIt = enemyPieces.back();
+            enemyPieces.pop_back();
+        }
+    }
+
     // Move the piece
     squares[move.startSquare] = emptySquare;
     if (move.isPromotion) {
         // Validate promotion type
-        if (move.promotionType == PieceType::QUEEN || 
-            move.promotionType == PieceType::ROOK || 
-            move.promotionType == PieceType::BISHOP || 
+        if (move.promotionType == PieceType::QUEEN ||
+            move.promotionType == PieceType::ROOK ||
+            move.promotionType == PieceType::BISHOP ||
             move.promotionType == PieceType::KNIGHT) {
             squares[move.targetSquare] = {move.promotionType, piece.color};
         } else {
@@ -503,10 +518,29 @@ void Board::makeMove(const Move& move) {
         squares[move.targetSquare] = piece;
     }
 
+    // Add piece to new position in piece list
+    friendlyPieces.push_back(move.targetSquare);
+
+    // Update king position if king moved
+    if (piece.type == PieceType::KING) {
+        if (piece.color == Color::WHITE) {
+            whiteKingSquare = move.targetSquare;
+        } else {
+            blackKingSquare = move.targetSquare;
+        }
+    }
+
     // Handle En Passant Capture
     if (move.isEnPassant) {
         int capturedPawnSquare = move.targetSquare + ((piece.color == Color::WHITE) ? -8 : 8);
         squares[capturedPawnSquare] = emptySquare; // Remove the captured pawn
+
+        // Remove en passant captured pawn from piece list
+        auto epIt = std::find(enemyPieces.begin(), enemyPieces.end(), capturedPawnSquare);
+        if (epIt != enemyPieces.end()) {
+            *epIt = enemyPieces.back();
+            enemyPieces.pop_back();
+        }
     }
 
     // Handle Castling Move
@@ -514,15 +548,27 @@ void Board::makeMove(const Move& move) {
         if (move.targetSquare == G1) { // White kingside
             squares[F1] = squares[H1];
             squares[H1] = emptySquare;
+            // Update rook in piece list: H1 -> F1
+            auto rookIt = std::find(whitePieces.begin(), whitePieces.end(), H1);
+            if (rookIt != whitePieces.end()) *rookIt = F1;
         } else if (move.targetSquare == C1) { // White queenside
             squares[D1] = squares[A1];
             squares[A1] = emptySquare;
+            // Update rook in piece list: A1 -> D1
+            auto rookIt = std::find(whitePieces.begin(), whitePieces.end(), A1);
+            if (rookIt != whitePieces.end()) *rookIt = D1;
         } else if (move.targetSquare == G8) { // Black kingside
             squares[F8] = squares[H8];
             squares[H8] = emptySquare;
+            // Update rook in piece list: H8 -> F8
+            auto rookIt = std::find(blackPieces.begin(), blackPieces.end(), H8);
+            if (rookIt != blackPieces.end()) *rookIt = F8;
         } else if (move.targetSquare == C8) { // Black queenside
             squares[D8] = squares[A8];
             squares[A8] = emptySquare;
+            // Update rook in piece list: A8 -> D8
+            auto rookIt = std::find(blackPieces.begin(), blackPieces.end(), A8);
+            if (rookIt != blackPieces.end()) *rookIt = D8;
         }
     }
 
@@ -582,4 +628,27 @@ void Board::unMakeMove() {
 
     // Restore the turn to the side that just moved.
     turn = (turn == Color::WHITE) ? Color::BLACK : Color::WHITE;
+
+    // Rebuild piece lists and king positions after unmake
+    whitePieces.clear();
+    blackPieces.clear();
+    whiteKingSquare = -1;
+    blackKingSquare = -1;
+
+    for (int square = 0; square < 64; square++) {
+        const Piece& piece = squares[square];
+        if (piece.type == PieceType::NONE) continue;
+
+        if (piece.color == Color::WHITE) {
+            whitePieces.push_back(square);
+            if (piece.type == PieceType::KING) {
+                whiteKingSquare = square;
+            }
+        } else {
+            blackPieces.push_back(square);
+            if (piece.type == PieceType::KING) {
+                blackKingSquare = square;
+            }
+        }
+    }
 }

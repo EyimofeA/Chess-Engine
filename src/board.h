@@ -16,11 +16,18 @@ public:
     Color turn;                    // Whose turn it is.
     int enPassantTarget;  // -1 if no en passant, else square index
     int halfMoveClock; // For the 50-move rule.
-    int fullMoveNumber;            
+    int fullMoveNumber;
     int nodeSearched;
     std::array<bool, 4> castleRights; // e.g., {true, true, true, true} for KQkq
     std::vector<lastMove> moveStack;
     ZobristArray initZobrist;
+
+    // Performance optimizations: piece lists and king positions
+    std::vector<int> whitePieces;  // Squares with white pieces
+    std::vector<int> blackPieces;  // Squares with black pieces
+    int whiteKingSquare;           // White king position
+    int blackKingSquare;           // Black king position
+
     // Starting FEN for the standard chess starting position.
     const std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     // std::vector<Move> moveList;   
