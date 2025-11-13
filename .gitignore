@@ -72,4 +72,5 @@ perft_test
 self_play_test
 stockfish_test
 uci_engine
+uci_engine_fixed
 
