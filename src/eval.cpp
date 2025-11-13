@@ -1,25 +1,45 @@
 #include "eval.h"
 #include "board.h"
 #include "types.h"
+#include "pieceSquareTables.h"
 
-// Define heuristic function
-int heuristic(Board& board) {
-    int myMaterial = 0;
-    int opponentMaterial = 0;
+// Helper to detect endgame phase
+// Endgame when: no queens on board OR total material < 1300 (roughly 2 rooks + minor piece per side)
+bool isEndgame(const Board& board) {
+    int totalMaterial = 0;
+    bool hasQueens = false;
 
     for (const auto& piece : board.squares) {
+        if (piece.type == PieceType::NONE) continue;
+        if (piece.type == PieceType::QUEEN) hasQueens = true;
+        totalMaterial += pieceValues[static_cast<int>(piece.type)];
+    }
+
+    return !hasQueens || totalMaterial < 1300;
+}
+
+// Define heuristic function with positional evaluation
+int heuristic(Board& board) {
+    int myScore = 0;
+    int opponentScore = 0;
+    bool endgame = isEndgame(board);
+
+    for (int square = 0; square < 64; square++) {
+        const Piece& piece = board.squares[square];
         if (piece.type == PieceType::NONE) continue; // Skip empty squares
 
         int pieceValue = pieceValues[static_cast<int>(piece.type)];
+        int positionBonus = PST::getPieceSquareValue(piece.type, piece.color, square, endgame);
+        int totalValue = pieceValue + positionBonus;
 
         if (piece.color == board.turn) {
-            myMaterial += pieceValue;
+            myScore += totalValue;
         } else {
-            opponentMaterial += pieceValue;
+            opponentScore += totalValue;
         }
     }
 
-    return myMaterial - opponentMaterial;
+    return myScore - opponentScore;
 }
 // Define evaluation function
 int evaluate(Board& board) {
