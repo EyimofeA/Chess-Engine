@@ -69,6 +69,7 @@ public:
 
     std::string squareToNotation(int square) const ;
     std::string getFEN() const;
+    uint64_t getZobristHash();              // Public getter for Zobrist hash
 private:
     std::vector<uint64_t> positionHistory;  // Stores board state hashes for threefold repetition
     uint64_t computeZobristHash();          // Computes a unique board hash

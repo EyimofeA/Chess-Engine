@@ -2,6 +2,8 @@
 #include "search.h"
 #include "eval.h"
 #include "utils.h"
+#include "transposition.h"
+#include "moveOrdering.h"
 #include <iostream>
 #include <chrono>
 #include <cstdlib> // For system()
@@ -38,13 +40,17 @@ int main() {
     Board board;
     board.board_from_fen_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
+    // Initialize transposition table and killer moves (reused across searches)
+    TranspositionTable tt(128);  // 128 MB transposition table
+    KillerMoves killers;
+
     for (int moveNum = 0; moveNum < NUM_MOVES; moveNum++) {
         std::cout << "Move " << moveNum + 1 << ":" << std::endl;
-        
-        // **Search for Best Move**
+
+        // **Search for Best Move using Optimized AlphaBeta**
         size_t nodesSearched = 0;
         auto startTime = std::chrono::high_resolution_clock::now();
-        Move bestMove = AlphaBeta(board, SEARCH_DEPTH, NEG_INF, POS_INF, nodesSearched).second;
+        Move bestMove = AlphaBetaOptimized(board, SEARCH_DEPTH, NEG_INF, POS_INF, nodesSearched, tt, killers).second;
         auto endTime = std::chrono::high_resolution_clock::now();
         double duration = std::chrono::duration<double>(endTime - startTime).count();
 
@@ -52,6 +58,8 @@ int main() {
         std::cout << "Engine move: " << moveToUCI(bestMove) << std::endl;
         std::cout << "Nodes searched: " << nodesSearched << std::endl;
         std::cout << "Time taken: " << duration << " seconds" << std::endl;
+        std::cout << "NPS: " << static_cast<size_t>(nodesSearched / duration) << std::endl;
+        std::cout << "TT size: " << tt.size() << " entries" << std::endl;
         
         // **Make the Move**
         board.makeMove(bestMove);
