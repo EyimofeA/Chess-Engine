@@ -179,6 +179,10 @@ uint64_t Board::computeZobristHash() {
     return hash;
 }
 
+uint64_t Board::getZobristHash() {
+    return computeZobristHash();
+}
+
 bool Board::isThreefoldRepetition() {
     // Ensure positionHistory is updated in makeMove/unMakeMove.
     uint64_t currentHash = computeZobristHash();
