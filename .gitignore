@@ -69,4 +69,6 @@ engine
 benchmark
 simple_perft
 perft_test
+self_play_test
+stockfish_test
 
